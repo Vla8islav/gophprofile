@@ -9,7 +9,7 @@ type gophprofileService struct {
 	authSecret []byte
 }
 
-func NewMetricsService(
+func NewGophprofileService(
 	repo domain.GophprofileRepository,
 	authSecret string,
 ) domain.GophprofileService {

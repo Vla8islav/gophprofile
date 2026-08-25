@@ -17,7 +17,7 @@ import (
 
 func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.OptionsServer, logger *zap.Logger) error {
 
-	srvApp := service.NewMetricsService(db,
+	srvApp := service.NewGophprofileService(db,
 		cfg.AuthTokenSecret.Value)
 
 	h := handler.NewHandler(srvApp, logger)
