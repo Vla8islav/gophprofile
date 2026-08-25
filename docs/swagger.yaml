@@ -1,0 +1,104 @@
+basePath: /
+definitions:
+  domain.UserLoginRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    type: object
+  domain.UserLoginResponse:
+    properties:
+      token:
+        type: string
+    type: object
+  domain.UserRegisterRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    type: object
+  domain.UserRegisterResponse:
+    properties:
+      token:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Profile picture manager service.
+  title: GophProfile API
+  version: "1.0"
+paths:
+  /api/ping:
+    get:
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      summary: Health check (database ping)
+      tags:
+      - system
+  /api/user/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: login + password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UserLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.UserLoginResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      summary: Authenticate (returns a JWT)
+      tags:
+      - auth
+  /api/user/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: login + password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UserRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.UserRegisterResponse'
+        "400":
+          description: Bad Request
+        "409":
+          description: Conflict
+        "500":
+          description: Internal Server Error
+      summary: Register a new user (returns a JWT)
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    description: Paste "Bearer <token>" - the token returned by /api/user/login or
+      /api/user/register.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
