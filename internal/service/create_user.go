@@ -25,7 +25,6 @@ func (m gophprofileService) CreateUser(ctx context.Context, userRegReq domain.Us
 	createUserParams := domain.CreateUserParams{
 		Login:        userRegReq.Login,
 		PasswordHash: hash,
-		Salt:         salt,
 	}
 	userID, err := m.repository.CreateUser(ctx, createUserParams)
 

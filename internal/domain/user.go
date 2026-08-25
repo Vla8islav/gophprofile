@@ -16,7 +16,6 @@ type UserRegisterResponse UserLoginResponse
 type CreateUserParams struct {
 	Login        string
 	PasswordHash string
-	Salt         []byte
 }
 
 type User struct {
