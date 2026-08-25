@@ -12,9 +12,9 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/mocks"
 )
 
-func TestgophprofileService_Ping(t *testing.T) {
+func TestGophprofileService_Ping(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	repo := mocks.NewMockgophprofileRepository(ctrl)
+	repo := mocks.NewMockGophprofileRepository(ctrl)
 	svc := gophprofileService{repository: repo}
 
 	repo.EXPECT().Ping(gomock.Any()).Return(nil)

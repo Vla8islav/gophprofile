@@ -6,8 +6,18 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Vla8islav/gophprofile/internal/config"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
+
+// If you already have an equivalent storage-setup helper, reuse it and drop this.
+func newSecretStorage(t *testing.T) (*PostgresStorage, context.Context) {
+	t.Helper()
+	cfg, err := config.ReadFlagsServer(nil, zap.NewNop())
+	require.NoError(t, err)
+	return InitTestPostgresStorage(t, cfg), context.Background()
+}
 
 // The commit path: multiple statements in one transaction all persist.
 func TestWithRetryTx_CommitsAllStatements(t *testing.T) {

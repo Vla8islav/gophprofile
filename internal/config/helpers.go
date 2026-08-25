@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func logSetFlags[T OptionsServer | OptionsClient](options *T, logger *zap.Logger) {
+func logSetFlags[T OptionsServer](options *T, logger *zap.Logger) {
 	if options == nil {
 		return
 	}
@@ -37,7 +37,7 @@ func logSetFlags[T OptionsServer | OptionsClient](options *T, logger *zap.Logger
 	logger.Info("command line options", fields...)
 }
 
-func logSetEnv[T OptionsServer | OptionsClient](options *T, logger *zap.Logger) {
+func logSetEnv[T OptionsServer](options *T, logger *zap.Logger) {
 	if options == nil {
 		return
 	}
@@ -69,7 +69,7 @@ func logSetEnv[T OptionsServer | OptionsClient](options *T, logger *zap.Logger) 
 	logger.Info("environment variables", fields...)
 }
 
-func logConfigOptions[T OptionsServer | OptionsClient](options *T, logger *zap.Logger) {
+func logConfigOptions[T OptionsServer](options *T, logger *zap.Logger) {
 	if options == nil {
 		return
 	}
@@ -102,7 +102,7 @@ func logConfigOptions[T OptionsServer | OptionsClient](options *T, logger *zap.L
 	logger.Info("config file options", fields...)
 }
 
-func mergeOptions[T OptionsServer | OptionsClient](mergeInto *T, newValues T) {
+func mergeOptions[T OptionsServer](mergeInto *T, newValues T) {
 	t := reflect.TypeOf(mergeInto).Elem()
 	vInto := reflect.ValueOf(mergeInto).Elem()
 	vNew := reflect.ValueOf(newValues)

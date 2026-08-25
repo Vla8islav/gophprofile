@@ -23,7 +23,7 @@ func TestMetricsService_LoginUser(t *testing.T) {
 	passwordHash, err := helpers.HashPassword("test-password")
 	require.NoError(t, err)
 
-	repository := mocks.NewMockgophprofileRepository(ctrl)
+	repository := mocks.NewMockGophprofileRepository(ctrl)
 	repository.EXPECT().
 		GetUserByLogin(gomock.Any(), "test-login").
 		Return(&domain.User{
@@ -57,7 +57,7 @@ func TestMetricsService_LoginUser_InvalidPassword(t *testing.T) {
 	passwordHash, err := helpers.HashPassword("test-password")
 	require.NoError(t, err)
 
-	repository := mocks.NewMockgophprofileRepository(ctrl)
+	repository := mocks.NewMockGophprofileRepository(ctrl)
 	repository.EXPECT().
 		GetUserByLogin(gomock.Any(), "test-login").
 		Return(&domain.User{
@@ -86,7 +86,7 @@ func TestMetricsService_LoginUser_UserNotFound(t *testing.T) {
 
 	ctx := context.Background()
 
-	repository := mocks.NewMockgophprofileRepository(ctrl)
+	repository := mocks.NewMockGophprofileRepository(ctrl)
 	repository.EXPECT().
 		GetUserByLogin(gomock.Any(), "missing-login").
 		Return(nil, domain.ErrInvalidUserCredentials)
@@ -112,7 +112,7 @@ func TestMetricsService_LoginUser_RepositoryError(t *testing.T) {
 	ctx := context.Background()
 	repositoryErr := errors.New("repository error")
 
-	repository := mocks.NewMockgophprofileRepository(ctrl)
+	repository := mocks.NewMockGophprofileRepository(ctrl)
 	repository.EXPECT().
 		GetUserByLogin(gomock.Any(), "test-login").
 		Return(nil, repositoryErr)

@@ -1,0 +1,9 @@
+{
+  "server_address": "localhost:8080",
+  "address_grpc": "localhost:9090",
+  "store_interval": "1s",
+  "private_key": "/Users/vla8islav/GolandProjects/gophkeeper/certs/server-key.pem",
+  "public_cert_key": "/Users/vla8islav/GolandProjects/gophkeeper/certs/server.pem",
+  "trusted_subnets" : "192.168.88.0/24,127.0.0.1/32",
+  "database_uri": "postgres://default_user:default_password@localhost:5432/gophkeeper_db?sslmode=disable"
+}

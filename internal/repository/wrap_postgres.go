@@ -7,8 +7,8 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/domain"
 )
 
-func WrapPostgres(currentConfig *config.OptionsServer) (domain.gophprofileRepository, error) {
-	var db domain.gophprofileRepository
+func WrapPostgres(currentConfig *config.OptionsServer) (domain.GophprofileRepository, error) {
+	var db domain.GophprofileRepository
 	var err error
 
 	// Case 1

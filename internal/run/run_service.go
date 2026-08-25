@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Run(ctx context.Context, db domain.gophprofileRepository, cfg *config.OptionsServer, logger *zap.Logger) error {
+func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.OptionsServer, logger *zap.Logger) error {
 
 	srvApp := service.NewMetricsService(db,
 		cfg.AuthTokenSecret.Value)

@@ -1,37 +1,23 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Vla8islav/gophprofile/internal/domain"
 	"github.com/Vla8islav/gophprofile/internal/mocks"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"go.uber.org/zap"
 )
 
-func newTestHandler(t *testing.T) (*Handler, *mocks.MockGophkeeperService) {
+func newTestHandler(t *testing.T) (*Handler, *mocks.MockGophprofileService) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	service := mocks.NewMockGophkeeperService(ctrl)
+	service := mocks.NewMockGophprofileService(ctrl)
 	h := &Handler{service: service, logger: zap.NewNop()}
 	return h, service
-}
-
-func validCreateBody(t *testing.T) []byte {
-	t.Helper()
-	b, err := json.Marshal(domain.CreateUserParams{
-		ID:      uuid.New(),
-		Type:    domain.SecretTypeText,
-		Payload: []byte("cipher"),
-	})
-	require.NoError(t, err)
-	return b
 }
 
 func TestDBPing_OK(t *testing.T) {

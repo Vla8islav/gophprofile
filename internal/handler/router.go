@@ -25,13 +25,6 @@ func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 	r.Group(func(r chi.Router) {
 
 		r.Use(middlewares.WithAuth([]byte(cfg.AuthTokenSecret.Value)))
-		r.Post("/api/secret/create", h.SecretCreateHandler)
-		r.Get("/api/secret/get/{id}", h.SecretGetHandler)
-		r.Put("/api/secret/update/{id}", h.SecretUpdateHandler)
-		r.Delete("/api/secret/delete/{id}", h.SecretDeleteHandler)
-		r.Get("/api/secret/list", h.SecretsListHandler)
-		r.Get("/api/secret/sync", h.SecretSyncHandler)
-		r.Get("/api/user/salt", h.UserSaltHandler)
 
 	})
 
