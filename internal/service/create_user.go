@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
@@ -13,12 +12,6 @@ func (m gophprofileService) CreateUser(ctx context.Context, userRegReq domain.Us
 	hash, err := helpers.HashPassword(userRegReq.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate the hash for the new user %s: %w",
-			userRegReq.Login, err)
-	}
-
-	salt := make([]byte, 16)
-	if _, err = rand.Read(salt); err != nil {
-		return nil, fmt.Errorf("failed to generate kdf salt for user %s: %w",
 			userRegReq.Login, err)
 	}
 
