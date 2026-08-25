@@ -11,7 +11,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestMetricsService_CreateUser(t *testing.T) {
+func TestGophprofileService_CreateUser(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -47,7 +47,7 @@ func TestMetricsService_CreateUser(t *testing.T) {
 	require.NotEmpty(t, authResult.Token)
 }
 
-func TestMetricsService_CreateUser_HashesSamePasswordDifferently(t *testing.T) {
+func TestGophprofileService_CreateUser_HashesSamePasswordDifferently(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)

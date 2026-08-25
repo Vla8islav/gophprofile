@@ -40,7 +40,7 @@ func SetupTestPostgres(t *testing.T, cfg *config.OptionsServer) {
 
 	pgContainer, err := tcpostgres.Run(ctx,
 		"postgres:16-alpine",
-		tcpostgres.WithDatabase("gophemart_test"),
+		tcpostgres.WithDatabase("gophprofile_test"),
 		tcpostgres.WithUsername("default_user"),
 		tcpostgres.WithPassword("default_password"),
 		testcontainers.WithWaitStrategy(

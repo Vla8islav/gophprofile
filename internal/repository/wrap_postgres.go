@@ -21,5 +21,5 @@ func WrapPostgres(currentConfig *config.OptionsServer) (domain.GophprofileReposi
 	}
 
 	return nil, fmt.Errorf("something strange happened: " +
-		"restore and connection string parameters are incorrect")
+		"DB DSN isn't configured")
 }
