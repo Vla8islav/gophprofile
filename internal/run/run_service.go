@@ -9,6 +9,7 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/audit"
 	"github.com/Vla8islav/gophprofile/internal/config"
 	"github.com/Vla8islav/gophprofile/internal/domain"
+	"github.com/Vla8islav/gophprofile/internal/filestorage"
 	"github.com/Vla8islav/gophprofile/internal/handler"
 	"github.com/Vla8islav/gophprofile/internal/middlewares"
 	"github.com/Vla8islav/gophprofile/internal/service"
@@ -17,7 +18,15 @@ import (
 
 func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.OptionsServer, logger *zap.Logger) error {
 
-	srvApp := service.NewGophprofileService(db,
+	fs, err := filestorage.NewMinioStorage(ctx,
+		cfg.S3Endpoint.Value,
+		cfg.S3AccessKey.Value,
+		cfg.S3SecretKey.Value,
+		cfg.S3Bucket.Value,
+		cfg.S3UseSSL.Value,
+	)
+
+	srvApp := service.NewGophprofileService(db, fs,
 		cfg.AuthTokenSecret.Value)
 
 	h := handler.NewHandler(srvApp, logger)
@@ -50,7 +59,6 @@ func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.Optio
 
 	// TLS when both cert and key are configured (local mkcert dev); otherwise plain
 	// HTTP, for running behind a TLS-terminating reverse proxy, caddy, in prod
-	var err error
 	if cfg.PublicCertKey.Value != "" && cfg.PrivateKey.Value != "" {
 		err = srv.ListenAndServeTLS(cfg.PublicCertKey.Value, cfg.PrivateKey.Value)
 	} else {
