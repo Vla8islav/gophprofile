@@ -124,6 +124,20 @@ func (mr *MockGophprofileServiceMockRecorder) CreateUser(ctx, request any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockGophprofileService)(nil).CreateUser), ctx, request)
 }
 
+// FileStoragePing mocks base method.
+func (m *MockGophprofileService) FileStoragePing(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FileStoragePing", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FileStoragePing indicates an expected call of FileStoragePing.
+func (mr *MockGophprofileServiceMockRecorder) FileStoragePing(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileStoragePing", reflect.TypeOf((*MockGophprofileService)(nil).FileStoragePing), ctx)
+}
+
 // LoginUser mocks base method.
 func (m *MockGophprofileService) LoginUser(ctx context.Context, request domain.UserLoginRequest) (*domain.AuthResult, error) {
 	m.ctrl.T.Helper()

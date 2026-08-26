@@ -5,8 +5,9 @@ import (
 )
 
 type gophprofileService struct {
-	repository domain.GophprofileRepository
-	authSecret []byte
+	repository  domain.GophprofileRepository
+	fileStorage domain.FileStorage
+	authSecret  []byte
 }
 
 func NewGophprofileService(
