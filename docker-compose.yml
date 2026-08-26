@@ -1,57 +1,114 @@
 services:
   postgres:
     image: postgres:16
-    container_name: gophkeeper-postgres
+    container_name: gophprofile-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-gophprofile}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gophprofile}
+      POSTGRES_DB: ${POSTGRES_DB:-gophprofile}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gophprofile} -d ${POSTGRES_DB:-gophprofile}"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 10s
 
-  gophkeeper:
+  minio:
+    image: minio/minio:RELEASE.2024-01-16T16-07-38Z
+    container_name: gophprofile-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  kafka:
+    # this node is broker and controller at once.
+    image: apache/kafka:3.9.0
+    container_name: gophprofile-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  gophprofile:
     build: .
-    container_name: gophkeeper-server
+    container_name: gophprofile-server
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
+      minio:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     environment:
       RUN_ADDRESS: ":8080"
-      DATABASE_URI: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
-      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET}
+      DATABASE_URI: "postgres://${POSTGRES_USER:-gophprofile}:${POSTGRES_PASSWORD:-gophprofile}@postgres:5432/${POSTGRES_DB:-gophprofile}?sslmode=disable"
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-dev-only-secret-change-me}
       MIGRATIONS_FOLDER: "/app/migrations"
-      AUDIT_LOG_PATH: "/var/log/gophkeeper/audit.jsonl"
+      S3_ENDPOINT: "minio:9000"
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: "avatars"
+      KAFKA_BROKERS: "kafka:9092"
+      KAFKA_TOPIC: "avatar-events"
+      AUDIT_LOG_PATH: "/var/log/gophprofile/audit.jsonl"
     volumes:
-      - audit_logs:/var/log/gophkeeper
-    expose:
-      - "8080"
-
-  caddy:
-    image: caddy:2
-    container_name: gophkeeper-caddy
-    restart: unless-stopped
-    depends_on:
-      - gophkeeper
+      - audit_logs:/var/log/gophprofile
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:8080"
+
+  worker:
+    build: .
+    container_name: gophprofile-worker
+    restart: unless-stopped
+    entrypoint: ["/usr/local/bin/gophprofile-worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     environment:
-      DOMAIN: ${DOMAIN}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data # Let's Encrypt certs
-      - caddy_config:/config
+      DATABASE_URI: "postgres://${POSTGRES_USER:-gophprofile}:${POSTGRES_PASSWORD:-gophprofile}@postgres:5432/${POSTGRES_DB:-gophprofile}?sslmode=disable"
+      S3_ENDPOINT: "minio:9000"
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: "avatars"
+      KAFKA_BROKERS: "kafka:9092"
+      KAFKA_TOPIC: "avatar-events"
 
 volumes:
   postgres_data:
+  minio_data:
+  kafka_data:
   audit_logs:
-  caddy_data:
-  caddy_config:
