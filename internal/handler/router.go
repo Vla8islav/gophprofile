@@ -15,13 +15,22 @@ func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.StripSlashes)
 
-	// Swagger UI (public): browse the API docs at /swagger/index.html
+	// Swagger UI
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	r.Get("/health", h.HealthHandler)
 	r.Get("/api/ping", h.DBPing)
 	r.Post("/api/user/register", h.UserRegisterHandler)
 	r.Post("/api/user/login", h.UserLoginHandler)
+
+	// web interface
+	r.Get("/web", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/web/upload", http.StatusMovedPermanently)
+	})
+	r.Get("/web/upload", h.serveWebFile("index.html",
+		"text/html; charset=utf-8"))
+	r.Get("/web/static/auth.js", h.serveWebFile("auth.js",
+		"application/javascript; charset=utf-8"))
 
 	// Public read endpoints
 	r.Get("/api/v1/avatars/{avatar_id}", h.AvatarGetHandler)

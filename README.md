@@ -26,6 +26,7 @@ curl localhost:8080/health
 # {"status":"ok","components":{"broker":"ok","database":"ok","s3":"ok"}}
 ```
 
+Frontend: `http://localhost:8080/web/` 
 Swagger UI: `http://localhost:8080/swagger/index.html`.
 MinIO console: `http://localhost:9001` (minioadmin / minioadmin).
 
@@ -37,7 +38,7 @@ TOKEN=$(curl -s -X POST localhost:8080/api/user/register \
   -d '{"login":"me","password":"secret-pass"}' | jq -r .token)
 
 curl -s -X POST localhost:8080/api/v1/avatars \
-  -H "Authorization: Bearer $TOKEN" -F "file=@photo.jpg"
+  -H "Authorization: Bearer $TOKEN" -F "file=@thumb.jpg"
 
 curl -s localhost:8080/api/v1/avatars/<uuid>/metadata | jq .status
 curl -s -o thumb.jpg "localhost:8080/api/v1/avatars/<uuid>?size=100x100"
