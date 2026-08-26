@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -15,7 +14,6 @@ import (
 
 func startMinioStorage(t *testing.T) *MinioStorage {
 	t.Helper()
-	os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

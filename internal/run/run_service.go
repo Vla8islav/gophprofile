@@ -6,7 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	"strings"
+
 	"github.com/Vla8islav/gophprofile/internal/audit"
+	"github.com/Vla8islav/gophprofile/internal/broker"
 	"github.com/Vla8islav/gophprofile/internal/config"
 	"github.com/Vla8islav/gophprofile/internal/domain"
 	"github.com/Vla8islav/gophprofile/internal/filestorage"
@@ -29,7 +32,13 @@ func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.Optio
 		return err
 	}
 
-	srvApp := service.NewGophprofileService(db, fs,
+	events := broker.NewKafkaPublisher(ctx,
+		strings.Split(cfg.KafkaBrokers.Value, ","),
+		cfg.KafkaTopic.Value,
+	)
+	defer func() { _ = events.Close() }()
+
+	srvApp := service.NewGophprofileService(db, fs, events, logger,
 		cfg.AuthTokenSecret.Value)
 
 	h := handler.NewHandler(srvApp, logger)

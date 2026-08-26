@@ -42,5 +42,11 @@ func (m gophprofileService) UploadAvatar(ctx context.Context, userID int64, file
 	}
 	avatar.UploadStatus = domain.UploadStatusCompleted
 
+	m.publishEvent(ctx, avatarID, domain.EventTypeAvatarUploaded, domain.AvatarUploadEvent{
+		AvatarID: avatarID,
+		UserID:   userID,
+		S3Key:    s3Key,
+	})
+
 	return avatar, nil
 }

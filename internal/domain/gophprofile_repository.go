@@ -14,5 +14,7 @@ type GophprofileRepository interface {
 	GetLatestAvatarByUserID(ctx context.Context, userID int64) (*Avatar, error)
 	ListAvatarsByUserID(ctx context.Context, userID int64) ([]Avatar, error)
 	SetAvatarUploadStatus(ctx context.Context, avatarID string, status string) error
+	SetAvatarProcessingStatus(ctx context.Context, avatarID string, status string) error
+	SetAvatarThumbnails(ctx context.Context, avatarID string, thumbnailKeys map[string]string) error
 	SoftDeleteAvatar(ctx context.Context, avatarID string) error
 }

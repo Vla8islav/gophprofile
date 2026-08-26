@@ -62,10 +62,12 @@ func NewPostgresStorage(config *config.OptionsServer, migrationsFolder string) (
 		return nil, fmt.Errorf("failed to ping postgres %w", err)
 	}
 
-	// Run all pending migrations from migrations/
-	if err := goose.Up(db, migrationsFolder); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("apply goose migrations: %w", err)
+	// Run all pending migrations from migrations/. An empty folder means don't
+	if migrationsFolder != "" {
+		if err := goose.Up(db, migrationsFolder); err != nil {
+			_ = db.Close()
+			return nil, fmt.Errorf("apply goose migrations: %w", err)
+		}
 	}
 
 	return &storage, nil

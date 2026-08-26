@@ -29,7 +29,7 @@ func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
 		Components: map[string]string{
 			"database": "ok",
 			"s3":       "ok",
-			// The broker will be here in time
+			"broker":   "ok",
 		},
 	}
 
@@ -39,6 +39,10 @@ func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.service.FileStoragePing(ctx); err != nil {
 		response.Components["s3"] = "error: " + err.Error()
+		response.Status = "degraded"
+	}
+	if err := h.service.BrokerPing(ctx); err != nil {
+		response.Components["broker"] = "error: " + err.Error()
 		response.Status = "degraded"
 	}
 
