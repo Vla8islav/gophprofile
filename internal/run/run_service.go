@@ -25,6 +25,9 @@ func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.Optio
 		cfg.S3Bucket.Value,
 		cfg.S3UseSSL.Value,
 	)
+	if err != nil {
+		return err
+	}
 
 	srvApp := service.NewGophprofileService(db, fs,
 		cfg.AuthTokenSecret.Value)
@@ -46,8 +49,8 @@ func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.Optio
 	srv := &http.Server{
 		Addr:         cfg.ServerAddress.Value,
 		Handler:      handlerWithMW,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	go func() {
