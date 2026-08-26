@@ -146,6 +146,34 @@ func (mr *MockGophprofileRepositoryMockRecorder) Ping(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockGophprofileRepository)(nil).Ping), ctx)
 }
 
+// SetAvatarProcessingStatus mocks base method.
+func (m *MockGophprofileRepository) SetAvatarProcessingStatus(ctx context.Context, avatarID, status string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetAvatarProcessingStatus", ctx, avatarID, status)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetAvatarProcessingStatus indicates an expected call of SetAvatarProcessingStatus.
+func (mr *MockGophprofileRepositoryMockRecorder) SetAvatarProcessingStatus(ctx, avatarID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAvatarProcessingStatus", reflect.TypeOf((*MockGophprofileRepository)(nil).SetAvatarProcessingStatus), ctx, avatarID, status)
+}
+
+// SetAvatarThumbnails mocks base method.
+func (m *MockGophprofileRepository) SetAvatarThumbnails(ctx context.Context, avatarID string, thumbnailKeys map[string]string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetAvatarThumbnails", ctx, avatarID, thumbnailKeys)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetAvatarThumbnails indicates an expected call of SetAvatarThumbnails.
+func (mr *MockGophprofileRepositoryMockRecorder) SetAvatarThumbnails(ctx, avatarID, thumbnailKeys any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAvatarThumbnails", reflect.TypeOf((*MockGophprofileRepository)(nil).SetAvatarThumbnails), ctx, avatarID, thumbnailKeys)
+}
+
 // SetAvatarUploadStatus mocks base method.
 func (m *MockGophprofileRepository) SetAvatarUploadStatus(ctx context.Context, avatarID, status string) error {
 	m.ctrl.T.Helper()

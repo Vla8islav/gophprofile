@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 const (
 	UploadStatusUploading = "uploading"
@@ -8,7 +11,34 @@ const (
 
 	ProcessingStatusPending   = "pending"
 	ProcessingStatusCompleted = "completed"
+	ProcessingStatusFailed    = "failed"
 )
+
+// ThumbnailSizes maps the public size variant to its pixel edge. Thumbnails
+// are square (scale-to-fill + center crop) and always JPEG.
+var ThumbnailSizes = map[string]int{
+	"100x100": 100,
+	"300x300": 300,
+}
+
+// ThumbnailS3Key is where the worker stores a generated thumbnail.
+func ThumbnailS3Key(avatarID, size string) string {
+	return fmt.Sprintf("thumbnails/%s/%s.jpg", avatarID, size)
+}
+
+// ContentFor resolves which S3 object and content type a size variant is
+// served with. Thumbnails are always JPEG regardless of the original's
+// format; a variant without a generated thumbnail falls back to the
+// original (thumbnails appear asynchronously).
+func (a *Avatar) ContentFor(sizeVariant string) (s3Key, contentType string) {
+	if sizeVariant == "" || sizeVariant == "original" {
+		return a.S3Key, a.MimeType
+	}
+	if key, ok := a.ThumbnailS3Keys[sizeVariant]; ok {
+		return key, "image/jpeg"
+	}
+	return a.S3Key, a.MimeType
+}
 
 // AllowedAvatarMimeTypes are the formats accepted on upload (validated by magic bytes).
 var AllowedAvatarMimeTypes = map[string]bool{
