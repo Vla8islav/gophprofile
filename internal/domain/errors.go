@@ -4,8 +4,6 @@ import "fmt"
 
 var ErrInvalidUserCredentials = fmt.Errorf("invalid user credentials")
 
-var ErrSecretAlreadyExists = fmt.Errorf("secret already exists")
-var ErrInvalidSecretType = fmt.Errorf("invalid secret type")
-var ErrSecretNotFound = fmt.Errorf("secret not found")
-var ErrInvalidSecretID = fmt.Errorf("invalid secret id")
-var ErrVersionConflict = fmt.Errorf("secret version conflict")
+var ErrAvatarNotFound = fmt.Errorf("avatar not found")
+var ErrNotAvatarOwner = fmt.Errorf("you can only delete your own avatars")
+var ErrUnsupportedAvatarFormat = fmt.Errorf("unsupported avatar format")

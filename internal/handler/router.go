@@ -18,14 +18,25 @@ func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 	// Swagger UI (public): browse the API docs at /swagger/index.html
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
+	r.Get("/health", h.HealthHandler)
 	r.Get("/api/ping", h.DBPing)
 	r.Post("/api/user/register", h.UserRegisterHandler)
 	r.Post("/api/user/login", h.UserLoginHandler)
 
-	r.Group(func(r chi.Router) {
+	// Public read endpoints
+	r.Get("/api/v1/avatars/{avatar_id}", h.AvatarGetHandler)
+	//r.Get("/api/v1/avatars/{avatar_id}/metadata", h.AvatarMetadataHandler)
+	r.Get("/api/v1/users/{user_id}/avatar", h.UserAvatarGetHandler)
+	//r.Get("/api/v1/users/{user_id}/avatars", h.UserAvatarsListHandler)
 
+	// Mutating endpoints require a Bearer token; the user id comes from the
+	// token, never from headers or the URL.
+	r.Group(func(r chi.Router) {
 		r.Use(middlewares.WithAuth([]byte(cfg.AuthTokenSecret.Value)))
 
+		//r.Post("/api/v1/avatars", h.AvatarUploadHandler)
+		//r.Delete("/api/v1/avatars/{avatar_id}", h.AvatarDeleteHandler)
+		//r.Delete("/api/v1/users/{user_id}/avatar", h.UserAvatarDeleteHandler)
 	})
 
 	return r

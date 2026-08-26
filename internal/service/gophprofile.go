@@ -12,10 +12,12 @@ type gophprofileService struct {
 
 func NewGophprofileService(
 	repo domain.GophprofileRepository,
+	fileStorage domain.FileStorage,
 	authSecret string,
 ) domain.GophprofileService {
 	return gophprofileService{
-		repository: repo,
-		authSecret: []byte(authSecret),
+		repository:  repo,
+		fileStorage: fileStorage,
+		authSecret:  []byte(authSecret),
 	}
 }
