@@ -2,12 +2,9 @@ package handler
 
 import (
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
-	"go.uber.org/zap"
 )
 
 // AvatarGetHandler godoc

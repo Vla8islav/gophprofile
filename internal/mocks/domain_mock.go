@@ -213,6 +213,34 @@ func (mr *MockGophprofileServiceMockRecorder) CreateUser(ctx, request any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockGophprofileService)(nil).CreateUser), ctx, request)
 }
 
+// DeleteAvatar mocks base method.
+func (m *MockGophprofileService) DeleteAvatar(ctx context.Context, avatarID string, requesterID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAvatar", ctx, avatarID, requesterID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAvatar indicates an expected call of DeleteAvatar.
+func (mr *MockGophprofileServiceMockRecorder) DeleteAvatar(ctx, avatarID, requesterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAvatar", reflect.TypeOf((*MockGophprofileService)(nil).DeleteAvatar), ctx, avatarID, requesterID)
+}
+
+// DeleteUserAvatar mocks base method.
+func (m *MockGophprofileService) DeleteUserAvatar(ctx context.Context, userID, requesterID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteUserAvatar", ctx, userID, requesterID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteUserAvatar indicates an expected call of DeleteUserAvatar.
+func (mr *MockGophprofileServiceMockRecorder) DeleteUserAvatar(ctx, userID, requesterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUserAvatar", reflect.TypeOf((*MockGophprofileService)(nil).DeleteUserAvatar), ctx, userID, requesterID)
+}
+
 // FileStoragePing mocks base method.
 func (m *MockGophprofileService) FileStoragePing(ctx context.Context) error {
 	m.ctrl.T.Helper()
@@ -225,6 +253,68 @@ func (m *MockGophprofileService) FileStoragePing(ctx context.Context) error {
 func (mr *MockGophprofileServiceMockRecorder) FileStoragePing(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileStoragePing", reflect.TypeOf((*MockGophprofileService)(nil).FileStoragePing), ctx)
+}
+
+// GetAvatarContent mocks base method.
+func (m *MockGophprofileService) GetAvatarContent(ctx context.Context, avatarID, sizeVariant string) (*domain.Avatar, io.ReadCloser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAvatarContent", ctx, avatarID, sizeVariant)
+	ret0, _ := ret[0].(*domain.Avatar)
+	ret1, _ := ret[1].(io.ReadCloser)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetAvatarContent indicates an expected call of GetAvatarContent.
+func (mr *MockGophprofileServiceMockRecorder) GetAvatarContent(ctx, avatarID, sizeVariant any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvatarContent", reflect.TypeOf((*MockGophprofileService)(nil).GetAvatarContent), ctx, avatarID, sizeVariant)
+}
+
+// GetAvatarMetadata mocks base method.
+func (m *MockGophprofileService) GetAvatarMetadata(ctx context.Context, avatarID string) (*domain.Avatar, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAvatarMetadata", ctx, avatarID)
+	ret0, _ := ret[0].(*domain.Avatar)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAvatarMetadata indicates an expected call of GetAvatarMetadata.
+func (mr *MockGophprofileServiceMockRecorder) GetAvatarMetadata(ctx, avatarID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvatarMetadata", reflect.TypeOf((*MockGophprofileService)(nil).GetAvatarMetadata), ctx, avatarID)
+}
+
+// GetUserAvatarContent mocks base method.
+func (m *MockGophprofileService) GetUserAvatarContent(ctx context.Context, userID int64, sizeVariant string) (*domain.Avatar, io.ReadCloser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserAvatarContent", ctx, userID, sizeVariant)
+	ret0, _ := ret[0].(*domain.Avatar)
+	ret1, _ := ret[1].(io.ReadCloser)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetUserAvatarContent indicates an expected call of GetUserAvatarContent.
+func (mr *MockGophprofileServiceMockRecorder) GetUserAvatarContent(ctx, userID, sizeVariant any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserAvatarContent", reflect.TypeOf((*MockGophprofileService)(nil).GetUserAvatarContent), ctx, userID, sizeVariant)
+}
+
+// ListUserAvatars mocks base method.
+func (m *MockGophprofileService) ListUserAvatars(ctx context.Context, userID int64) ([]domain.Avatar, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListUserAvatars", ctx, userID)
+	ret0, _ := ret[0].([]domain.Avatar)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListUserAvatars indicates an expected call of ListUserAvatars.
+func (mr *MockGophprofileServiceMockRecorder) ListUserAvatars(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUserAvatars", reflect.TypeOf((*MockGophprofileService)(nil).ListUserAvatars), ctx, userID)
 }
 
 // LoginUser mocks base method.
@@ -254,6 +344,21 @@ func (m *MockGophprofileService) Ping(ctx context.Context) error {
 func (mr *MockGophprofileServiceMockRecorder) Ping(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockGophprofileService)(nil).Ping), ctx)
+}
+
+// UploadAvatar mocks base method.
+func (m *MockGophprofileService) UploadAvatar(ctx context.Context, userID int64, fileName, mimeType string, size int64, content io.Reader) (*domain.Avatar, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadAvatar", ctx, userID, fileName, mimeType, size, content)
+	ret0, _ := ret[0].(*domain.Avatar)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UploadAvatar indicates an expected call of UploadAvatar.
+func (mr *MockGophprofileServiceMockRecorder) UploadAvatar(ctx, userID, fileName, mimeType, size, content any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadAvatar", reflect.TypeOf((*MockGophprofileService)(nil).UploadAvatar), ctx, userID, fileName, mimeType, size, content)
 }
 
 // MockFileStorage is a mock of FileStorage interface.
