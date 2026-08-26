@@ -15,12 +15,11 @@ func (s *PostgresStorage) CreateUser(ctx context.Context, user domain.CreateUser
 	err := s.withRetry(ctx, func() error {
 		err := s.db.QueryRowContext(ctx,
 			`INSERT INTO users (login, password_hash)
-			 VALUES ($1, $2, $3)
+			 VALUES ($1, $2)
 			 ON CONFLICT (login) DO NOTHING
 			 RETURNING id`,
 			user.Login,
 			user.PasswordHash,
-			user.Salt,
 		).Scan(&userID)
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrUserAlreadyExists

@@ -15,11 +15,11 @@ func WrapPostgres(currentConfig *config.OptionsServer) (domain.GophprofileReposi
 	if currentConfig.DatabaseURI.BeenSet {
 		db, err = NewPostgresStorage(currentConfig, currentConfig.MigrationsFolder.Value)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize metrics repository: %w", err)
+			return nil, fmt.Errorf("failed to initialize gophprofile repository: %w", err)
 		}
 		return db, nil
 	}
 
 	return nil, fmt.Errorf("something strange happened: " +
-		"restore and connection string parameters are incorrect")
+		"DB DSN isn't configured")
 }

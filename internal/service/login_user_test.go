@@ -12,7 +12,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestMetricsService_LoginUser(t *testing.T) {
+func TestGophprofileService_LoginUser(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -46,7 +46,7 @@ func TestMetricsService_LoginUser(t *testing.T) {
 	require.NotEmpty(t, authResult.Token)
 }
 
-func TestMetricsService_LoginUser_InvalidPassword(t *testing.T) {
+func TestGophprofileService_LoginUser_InvalidPassword(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -78,7 +78,7 @@ func TestMetricsService_LoginUser_InvalidPassword(t *testing.T) {
 	require.Nil(t, authResult)
 }
 
-func TestMetricsService_LoginUser_UserNotFound(t *testing.T) {
+func TestGophprofileService_LoginUser_UserNotFound(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -103,7 +103,7 @@ func TestMetricsService_LoginUser_UserNotFound(t *testing.T) {
 	require.Nil(t, authResult)
 }
 
-func TestMetricsService_LoginUser_RepositoryError(t *testing.T) {
+func TestGophprofileService_LoginUser_RepositoryError(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)

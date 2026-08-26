@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: gophkeeper-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  gophkeeper:
+    build: .
+    container_name: gophkeeper-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      RUN_ADDRESS: ":8080"
+      DATABASE_URI: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET}
+      MIGRATIONS_FOLDER: "/app/migrations"
+      AUDIT_LOG_PATH: "/var/log/gophkeeper/audit.jsonl"
+    volumes:
+      - audit_logs:/var/log/gophkeeper
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2
+    container_name: gophkeeper-caddy
+    restart: unless-stopped
+    depends_on:
+      - gophkeeper
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # Let's Encrypt certs
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  audit_logs:
+  caddy_data:
+  caddy_config:

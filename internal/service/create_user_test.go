@@ -11,7 +11,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestMetricsService_CreateUser(t *testing.T) {
+func TestGophprofileService_CreateUser(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -31,7 +31,6 @@ func TestMetricsService_CreateUser(t *testing.T) {
 			require.Equal(t, userRegReq.Login, params.Login)
 			require.NotEqual(t, userRegReq.Password, params.PasswordHash)
 			require.NoError(t, helpers.CompareHashAndPassword(params.PasswordHash, userRegReq.Password))
-			require.Len(t, params.Salt, 16) // service-generated 16-byte crypto salt
 
 			return 123, nil
 		})
@@ -48,7 +47,7 @@ func TestMetricsService_CreateUser(t *testing.T) {
 	require.NotEmpty(t, authResult.Token)
 }
 
-func TestMetricsService_CreateUser_HashesSamePasswordDifferently(t *testing.T) {
+func TestGophprofileService_CreateUser_HashesSamePasswordDifferently(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -60,14 +59,12 @@ func TestMetricsService_CreateUser_HashesSamePasswordDifferently(t *testing.T) {
 	secondReq := domain.UserRegisterRequest{Login: "second-user", Password: "same-password"}
 
 	var passwordHashes []string
-	var salts [][]byte // ← collect salts too
 
 	repository := mocks.NewMockGophprofileRepository(ctrl)
 	repository.EXPECT().
 		CreateUser(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, params domain.CreateUserParams) (int64, error) {
 			passwordHashes = append(passwordHashes, params.PasswordHash)
-			salts = append(salts, params.Salt) // ← capture salt
 			return int64(len(passwordHashes)), nil
 		}).
 		Times(2)
@@ -95,10 +92,4 @@ func TestMetricsService_CreateUser_HashesSamePasswordDifferently(t *testing.T) {
 	require.NotEqual(t, passwordHashes[0], passwordHashes[1])
 	require.NoError(t, helpers.CompareHashAndPassword(passwordHashes[0], firstReq.Password))
 	require.NoError(t, helpers.CompareHashAndPassword(passwordHashes[1], secondReq.Password))
-
-	// ← salts must be 16 bytes and DIFFERENT per registration (crypto/rand working)
-	require.Len(t, salts, 2)
-	require.Len(t, salts[0], 16)
-	require.Len(t, salts[1], 16)
-	require.NotEqual(t, salts[0], salts[1])
 }

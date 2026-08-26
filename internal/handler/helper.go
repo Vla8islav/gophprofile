@@ -52,3 +52,14 @@ func (h *Handler) writeToken(w http.ResponseWriter, token string) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(payload)
 }
+
+func (h *Handler) writeJSON(w http.ResponseWriter, status int, payload any) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		h.writeInternalServerError(w, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write(body)
+}

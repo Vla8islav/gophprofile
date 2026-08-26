@@ -23,12 +23,15 @@ type OptionsServer struct {
 	PublicCertKey    OptionalString `env:"PUBLIC_CERT_KEY" json:"public_cert_key" command_arg:"public-key"`
 	PrivateKey       OptionalString `env:"PRIVATE_KEY" json:"private_key" command_arg:"private-key"`
 	AuditLogPath     OptionalString `env:"AUDIT_LOG_PATH" json:"audit_log_path" command_arg:"audit-log"`
+	S3Endpoint       OptionalString `env:"S3_ENDPOINT" json:"s3_endpoint" command_arg:"s3-endpoint"`
+	S3AccessKey      OptionalString `env:"S3_ACCESS_KEY" json:"s3_access_key" command_arg:"s3-access-key"`
+	S3SecretKey      OptionalString `env:"S3_SECRET_KEY" json:"s3_secret_key" command_arg:"s3-secret-key"`
+	S3Bucket         OptionalString `env:"S3_BUCKET" json:"s3_bucket" command_arg:"s3-bucket"`
+	S3UseSSL         OptionalBool   `env:"S3_USE_SSL" json:"s3_use_ssl" command_arg:"s3-use-ssl"`
 	Config           OptionalString `env:"CONFIG" json:"-" command_arg:"config"`
 }
 
-// ReadFlagsServer reads server configuration from command-line arguments and environment variables.
-//
-// Precedence: environment variables, command-line flags, config file, defaults.
+// ReadFlagsServer  Precedence: environment variables, command-line flags, config file, defaults.
 func ReadFlagsServer(args []string, logger *zap.Logger) (*OptionsServer, error) {
 	if logger == nil {
 		panic("config server logger is nil")
@@ -87,13 +90,32 @@ func ReadFlagsServer(args []string, logger *zap.Logger) (*OptionsServer, error) 
 			Value:   "", // empty = audit disabled
 			BeenSet: false,
 		},
+		S3Endpoint: OptionalString{
+			Value:   "localhost:9000",
+			BeenSet: false,
+		},
+		S3AccessKey: OptionalString{
+			Value:   "minioadmin",
+			BeenSet: false,
+		},
+		S3SecretKey: OptionalString{
+			Value:   "minioadmin",
+			BeenSet: false,
+		},
+		S3Bucket: OptionalString{
+			Value:   "avatars",
+			BeenSet: false,
+		},
+		S3UseSSL: OptionalBool{
+			Value:   false,
+			BeenSet: false,
+		},
 		Config: OptionalString{
 			Value:   "",
 			BeenSet: false,
 		},
 	}
-	// Environment options have the highest priority,
-	// then command-line options, then disk config options.
+
 	mergeOptions(&finalOptions, diskConfigOptions)
 	mergeOptions(&finalOptions, *cmdOptions)
 	mergeOptions(&finalOptions, *envOptions)
@@ -133,6 +155,11 @@ func getOptionsServer(args []string) (*OptionsServer, error) {
 	fs.Var(&opt.PublicCertKey, "public-key", "путь до публичного ключа")
 	fs.Var(&opt.PrivateKey, "private-key", "путь до приватного ключа")
 	fs.Var(&opt.AuditLogPath, "audit-log", "путь до файла аудита (JSONL); пусто = выключено")
+	fs.Var(&opt.S3Endpoint, "s3-endpoint", "адрес S3-совместимого хранилища (minio), host:port")
+	fs.Var(&opt.S3AccessKey, "s3-access-key", "access key для S3")
+	fs.Var(&opt.S3SecretKey, "s3-secret-key", "secret key для S3")
+	fs.Var(&opt.S3Bucket, "s3-bucket", "имя S3-бакета для аватарок")
+	fs.Var(&opt.S3UseSSL, "s3-use-ssl", "использовать https при обращении к S3")
 	fs.Var(&opt.Config, "config", "путь до файла с конфигурацией приложения")
 	fs.Var(&opt.Config, "c", "путь до файла с конфигурацией приложения")
 	if err := fs.Parse(args); err != nil {

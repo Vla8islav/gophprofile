@@ -21,7 +21,6 @@ func TestPostgresStorage_CreateUser(t *testing.T) {
 	params := domain.CreateUserParams{
 		Login:        helpers.UniqueLogin("create-user-test"),
 		PasswordHash: "hashed-password",
-		Salt:         []byte{0x01, 0x02, 0x03, 0x04}, // any bytes - repo just stores them
 	}
 
 	userID, err := storage.CreateUser(ctx, params)
@@ -30,19 +29,17 @@ func TestPostgresStorage_CreateUser(t *testing.T) {
 
 	var login string
 	var passwordHash string
-	var salt []byte
 
 	err = storage.db.QueryRowContext(ctx,
-		`SELECT login, password_hash, kdf_salt
+		`SELECT login, password_hash
                  FROM users
                  WHERE id = $1`,
 		userID,
-	).Scan(&login, &passwordHash, &salt)
+	).Scan(&login, &passwordHash)
 	require.NoError(t, err)
 
 	require.Equal(t, params.Login, login)
 	require.Equal(t, params.PasswordHash, passwordHash)
-	require.Equal(t, params.Salt, salt) // salt persisted byte-for-byte
 }
 
 func TestPostgresStorage_CreateUser_DuplicateLogin(t *testing.T) {
