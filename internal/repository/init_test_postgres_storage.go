@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -19,6 +18,7 @@ var (
 	testStorageOnce sync.Once
 	testStorage     *PostgresStorage
 	testStorageErr  error
+	testPGContainer testcontainers.Container
 )
 
 func InitTestPostgresStorage(t *testing.T, cfg *config.OptionsServer) *PostgresStorage {
@@ -34,7 +34,6 @@ func InitTestPostgresStorage(t *testing.T, cfg *config.OptionsServer) *PostgresS
 
 func SetupTestPostgres(t *testing.T, cfg *config.OptionsServer) {
 	t.Helper()
-	os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 
 	ctx := context.Background()
 
@@ -50,6 +49,7 @@ func SetupTestPostgres(t *testing.T, cfg *config.OptionsServer) {
 		),
 	)
 	require.NoError(t, err, "failed to start postgres container")
+	testPGContainer = pgContainer
 
 	dsn, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
 	require.NoError(t, err, "failed to get connection string")

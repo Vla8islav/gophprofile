@@ -20,6 +20,7 @@ func TestHealthHandler_AllOK(t *testing.T) {
 	service := mocks.NewMockGophprofileService(ctrl)
 	service.EXPECT().Ping(gomock.Any()).Return(nil)
 	service.EXPECT().FileStoragePing(gomock.Any()).Return(nil)
+	service.EXPECT().BrokerPing(gomock.Any()).Return(nil)
 
 	h := newAvatarTestHandler(service)
 
@@ -45,6 +46,7 @@ func TestHealthHandler_S3Down(t *testing.T) {
 	service := mocks.NewMockGophprofileService(ctrl)
 	service.EXPECT().Ping(gomock.Any()).Return(nil)
 	service.EXPECT().FileStoragePing(gomock.Any()).Return(errors.New("connection refused"))
+	service.EXPECT().BrokerPing(gomock.Any()).Return(nil)
 
 	h := newAvatarTestHandler(service)
 

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"go.uber.org/zap"
 )
 
 func TestUploadAvatar_Success(t *testing.T) {
@@ -45,8 +46,12 @@ func TestUploadAvatar_Success(t *testing.T) {
 	repo.EXPECT().
 		SetAvatarUploadStatus(gomock.Any(), gomock.Any(), domain.UploadStatusCompleted).
 		Return(nil)
+	events := mocks.NewMockEventPublisher(ctrl)
+	events.EXPECT().
+		Publish(gomock.Any(), gomock.Any(), domain.EventTypeAvatarUploaded, gomock.Any()).
+		Return(nil)
 
-	service := gophprofileService{repository: repo, fileStorage: storage}
+	service := gophprofileService{repository: repo, fileStorage: storage, events: events, logger: zap.NewNop()}
 
 	avatar, err := service.UploadAvatar(context.Background(), 42, "cat.png", "image/png", 4, bytes.NewReader([]byte("data")))
 	require.NoError(t, err)

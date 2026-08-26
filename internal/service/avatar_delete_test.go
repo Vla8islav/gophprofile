@@ -8,6 +8,7 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/mocks"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"go.uber.org/zap"
 )
 
 func TestDeleteAvatar_Success(t *testing.T) {
@@ -19,8 +20,12 @@ func TestDeleteAvatar_Success(t *testing.T) {
 	repo.EXPECT().GetAvatarByID(gomock.Any(), "id-1").
 		Return(&domain.Avatar{ID: "id-1", UserID: 42}, nil)
 	repo.EXPECT().SoftDeleteAvatar(gomock.Any(), "id-1").Return(nil)
+	events := mocks.NewMockEventPublisher(ctrl)
+	events.EXPECT().
+		Publish(gomock.Any(), "id-1", domain.EventTypeAvatarDeleted, gomock.Any()).
+		Return(nil)
 
-	service := gophprofileService{repository: repo}
+	service := gophprofileService{repository: repo, events: events, logger: zap.NewNop()}
 
 	require.NoError(t, service.DeleteAvatar(context.Background(), "id-1", 42))
 }
@@ -33,7 +38,6 @@ func TestDeleteAvatar_ForbiddenForOtherUser(t *testing.T) {
 	repo := mocks.NewMockGophprofileRepository(ctrl)
 	repo.EXPECT().GetAvatarByID(gomock.Any(), "id-1").
 		Return(&domain.Avatar{ID: "id-1", UserID: 42}, nil)
-	// No SoftDeleteAvatar
 
 	service := gophprofileService{repository: repo}
 
@@ -65,8 +69,12 @@ func TestDeleteUserAvatar_Success(t *testing.T) {
 	repo.EXPECT().GetLatestAvatarByUserID(gomock.Any(), int64(42)).
 		Return(&domain.Avatar{ID: "id-1", UserID: 42}, nil)
 	repo.EXPECT().SoftDeleteAvatar(gomock.Any(), "id-1").Return(nil)
+	events := mocks.NewMockEventPublisher(ctrl)
+	events.EXPECT().
+		Publish(gomock.Any(), "id-1", domain.EventTypeAvatarDeleted, gomock.Any()).
+		Return(nil)
 
-	service := gophprofileService{repository: repo}
+	service := gophprofileService{repository: repo, events: events, logger: zap.NewNop()}
 
 	require.NoError(t, service.DeleteUserAvatar(context.Background(), 42, 42))
 }

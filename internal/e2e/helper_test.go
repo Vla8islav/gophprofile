@@ -15,24 +15,50 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Vla8islav/gophprofile/internal/broker"
 	"github.com/Vla8islav/gophprofile/internal/config"
 	"github.com/Vla8islav/gophprofile/internal/domain"
 	"github.com/Vla8islav/gophprofile/internal/filestorage"
 	"github.com/Vla8islav/gophprofile/internal/handler"
 	"github.com/Vla8islav/gophprofile/internal/repository"
 	"github.com/Vla8islav/gophprofile/internal/service"
+	"github.com/Vla8islav/gophprofile/internal/worker"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	tcminio "github.com/testcontainers/testcontainers-go/modules/minio"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
+	tcredpanda "github.com/testcontainers/testcontainers-go/modules/redpanda"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/zap"
 )
 
+var (
+	testPGContainer       testcontainers.Container
+	testMinioContainer    testcontainers.Container
+	testRedpandaContainer testcontainers.Container
+	testStopWorker        context.CancelFunc
+)
+
+// TestMain tears the shared containers down explicitly, so cleanup does not
+// depend on the Ryuk reaper (which some docker environments cannot run).
+func TestMain(m *testing.M) {
+	code := m.Run()
+	if testStopWorker != nil {
+		testStopWorker()
+	}
+	for _, c := range []testcontainers.Container{
+		testPGContainer, testMinioContainer, testRedpandaContainer,
+	} {
+		if c != nil {
+			_ = c.Terminate(context.Background())
+		}
+	}
+	os.Exit(code)
+}
+
 func startStack(t *testing.T) string {
 	t.Helper()
 	setupOnce.Do(func() {
-		os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 		ctx := context.Background()
 
 		pgContainer, err := tcpostgres.Run(ctx,
@@ -50,6 +76,7 @@ func startStack(t *testing.T) string {
 			setupErr = fmt.Errorf("start postgres: %w", err)
 			return
 		}
+		testPGContainer = pgContainer
 		dsn, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
 		if err != nil {
 			setupErr = fmt.Errorf("postgres dsn: %w", err)
@@ -61,6 +88,7 @@ func startStack(t *testing.T) string {
 			setupErr = fmt.Errorf("start minio: %w", err)
 			return
 		}
+		testMinioContainer = minioContainer
 		s3Endpoint, err := minioContainer.ConnectionString(ctx)
 		if err != nil {
 			setupErr = fmt.Errorf("minio endpoint: %w", err)
@@ -88,12 +116,33 @@ func startStack(t *testing.T) string {
 			return
 		}
 
-		svc := service.NewGophprofileService(db, fs, cfg.AuthTokenSecret.Value)
+		redpandaContainer, err := tcredpanda.Run(ctx, "redpandadata/redpanda:v24.3.6")
+		if err != nil {
+			setupErr = fmt.Errorf("start redpanda: %w", err)
+			return
+		}
+		testRedpandaContainer = redpandaContainer
+		seedBroker, err := redpandaContainer.KafkaSeedBroker(ctx)
+		if err != nil {
+			setupErr = fmt.Errorf("redpanda seed broker: %w", err)
+			return
+		}
+		events := broker.NewKafkaPublisher(ctx, []string{seedBroker}, "avatar-events-e2e")
+
+		// The real worker consumes in-process, so e2e covers the full async
+		// pipeline: upload -> event -> thumbnails -> completed.
+		consumer := broker.NewKafkaConsumer([]string{seedBroker}, "avatar-events-e2e", "e2e-worker", zap.NewNop())
+		avatarWorker := worker.New(db, fs, zap.NewNop())
+		workerCtx, stopWorker := context.WithCancel(context.Background())
+		testStopWorker = stopWorker
+		go func() { _ = consumer.Run(workerCtx, avatarWorker.HandleEvent) }()
+
+		svc := service.NewGophprofileService(db, fs, events, zap.NewNop(), cfg.AuthTokenSecret.Value)
 		h := handler.NewHandler(svc, zap.NewNop())
 		server := httptest.NewServer(handler.NewRouter(h, cfg))
 		baseURL = server.URL
-		// No explicit teardown: the process exit reaps the httptest server,
-		// and with Ryuk disabled the containers are removed by --rm/GC.
+		// The httptest server dies with the process; containers are
+		// terminated in TestMain.
 	})
 	require.NoError(t, setupErr)
 	return baseURL

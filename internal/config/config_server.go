@@ -28,6 +28,8 @@ type OptionsServer struct {
 	S3SecretKey      OptionalString `env:"S3_SECRET_KEY" json:"s3_secret_key" command_arg:"s3-secret-key"`
 	S3Bucket         OptionalString `env:"S3_BUCKET" json:"s3_bucket" command_arg:"s3-bucket"`
 	S3UseSSL         OptionalBool   `env:"S3_USE_SSL" json:"s3_use_ssl" command_arg:"s3-use-ssl"`
+	KafkaBrokers     OptionalString `env:"KAFKA_BROKERS" json:"kafka_brokers" command_arg:"kafka-brokers"`
+	KafkaTopic       OptionalString `env:"KAFKA_TOPIC" json:"kafka_topic" command_arg:"kafka-topic"`
 	Config           OptionalString `env:"CONFIG" json:"-" command_arg:"config"`
 }
 
@@ -110,6 +112,14 @@ func ReadFlagsServer(args []string, logger *zap.Logger) (*OptionsServer, error) 
 			Value:   false,
 			BeenSet: false,
 		},
+		KafkaBrokers: OptionalString{
+			Value:   "localhost:9092", // comma-separated list
+			BeenSet: false,
+		},
+		KafkaTopic: OptionalString{
+			Value:   "avatar-events",
+			BeenSet: false,
+		},
 		Config: OptionalString{
 			Value:   "",
 			BeenSet: false,
@@ -160,6 +170,8 @@ func getOptionsServer(args []string) (*OptionsServer, error) {
 	fs.Var(&opt.S3SecretKey, "s3-secret-key", "secret key для S3")
 	fs.Var(&opt.S3Bucket, "s3-bucket", "имя S3-бакета для аватарок")
 	fs.Var(&opt.S3UseSSL, "s3-use-ssl", "использовать https при обращении к S3")
+	fs.Var(&opt.KafkaBrokers, "kafka-brokers", "адреса kafka-брокеров через запятую")
+	fs.Var(&opt.KafkaTopic, "kafka-topic", "kafka-топик для событий аватарок")
 	fs.Var(&opt.Config, "config", "путь до файла с конфигурацией приложения")
 	fs.Var(&opt.Config, "c", "путь до файла с конфигурацией приложения")
 	if err := fs.Parse(args); err != nil {
