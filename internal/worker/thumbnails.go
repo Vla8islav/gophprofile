@@ -14,6 +14,7 @@ import (
 
 	_ "golang.org/x/image/webp"
 
+	"github.com/Vla8islav/gophprofile/internal/broker"
 	"github.com/Vla8islav/gophprofile/internal/domain"
 	"golang.org/x/image/draw"
 )
@@ -30,14 +31,14 @@ func (w *Worker) generateThumbnails(ctx context.Context, avatar *domain.Avatar) 
 
 	src, _, err := image.Decode(original)
 	if err != nil {
-		return fmt.Errorf("decode original: %w", err)
+		return broker.Permanent(fmt.Errorf("decode original: %w", err))
 	}
 
 	keys := make(map[string]string, len(domain.ThumbnailSizes))
 	for size, edge := range domain.ThumbnailSizes {
 		thumbnail, err := renderThumbnail(src, edge)
 		if err != nil {
-			return fmt.Errorf("render %s: %w", size, err)
+			return broker.Permanent(fmt.Errorf("render %s: %w", size, err))
 		}
 		key := domain.ThumbnailS3Key(avatar.ID, size)
 		err = w.fileStorage.Upload(ctx, key, "image/jpeg", int64(thumbnail.Len()), thumbnail)
