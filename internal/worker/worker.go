@@ -6,15 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
+	"github.com/Vla8islav/gophprofile/internal/broker"
 	"github.com/Vla8islav/gophprofile/internal/domain"
 	"go.uber.org/zap"
-)
-
-const (
-	maxAttempts   = 3
-	retryBaseWait = time.Second
 )
 
 type Worker struct {
@@ -33,17 +28,16 @@ func (w *Worker) HandleEvent(ctx context.Context, envelope domain.EventEnvelope)
 	case domain.EventTypeAvatarUploaded:
 		var event domain.AvatarUploadEvent
 		if err := json.Unmarshal(envelope.Payload, &event); err != nil {
-			return fmt.Errorf("decode %s payload: %w", envelope.Type, err)
+			return broker.Permanent(fmt.Errorf("decode %s payload: %w", envelope.Type, err))
 		}
 		return w.handleUploaded(ctx, event)
 	case domain.EventTypeAvatarDeleted:
 		var event domain.AvatarDeleteEvent
 		if err := json.Unmarshal(envelope.Payload, &event); err != nil {
-			return fmt.Errorf("decode %s payload: %w", envelope.Type, err)
+			return broker.Permanent(fmt.Errorf("decode %s payload: %w", envelope.Type, err))
 		}
 		return w.handleDeleted(ctx, event)
 	default:
-		// Unknown types are logged
 		w.logger.Warn("ignoring unknown event type", zap.String("type", envelope.Type))
 		return nil
 	}
@@ -68,33 +62,23 @@ func (w *Worker) handleUploaded(ctx context.Context, event domain.AvatarUploadEv
 		return nil
 	}
 
-	var lastErr error
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		lastErr = w.generateThumbnails(ctx, avatar)
-		if lastErr == nil {
-			w.logger.Info("thumbnails generated",
-				zap.String("avatar_id", event.AvatarID))
-			return nil
-		}
-		w.logger.Warn("thumbnail generation attempt failed",
-			zap.String("avatar_id", event.AvatarID),
-			zap.Int("attempt", attempt),
-			zap.Error(lastErr),
-		)
-		if attempt < maxAttempts {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(time.Duration(attempt) * retryBaseWait):
-			}
-		}
+	err = w.generateThumbnails(ctx, avatar)
+	if err == nil {
+		w.logger.Info("thumbnails generated",
+			zap.String("avatar_id", event.AvatarID))
+		return nil
 	}
 
-	if err := w.repository.SetAvatarProcessingStatus(ctx, event.AvatarID, domain.ProcessingStatusFailed); err != nil {
-		w.logger.Error("failed to mark avatar as failed",
-			zap.String("avatar_id", event.AvatarID), zap.Error(err))
+	// Permanent - record the failure
+	// Transient - S3/DB return the error as-is
+	if broker.IsPermanent(err) {
+		if markErr := w.repository.SetAvatarProcessingStatus(ctx,
+			event.AvatarID, domain.ProcessingStatusFailed); markErr != nil {
+			w.logger.Error("failed to mark avatar as failed",
+				zap.String("avatar_id", event.AvatarID), zap.Error(markErr))
+		}
 	}
-	return fmt.Errorf("thumbnails for avatar %s after %d attempts: %w", event.AvatarID, maxAttempts, lastErr)
+	return fmt.Errorf("thumbnails for avatar %s: %w", event.AvatarID, err)
 }
 
 // handleDeleted removes every S3 object the avatar owned
@@ -111,7 +95,8 @@ func (w *Worker) handleDeleted(ctx context.Context, event domain.AvatarDeleteEve
 		}
 	}
 	if len(failed) > 0 {
-		return fmt.Errorf("delete %d/%d objects for avatar %s", len(failed), len(event.S3Keys), event.AvatarID)
+		return fmt.Errorf("delete %d/%d objects for avatar %s",
+			len(failed), len(event.S3Keys), event.AvatarID)
 	}
 	w.logger.Info("avatar objects deleted",
 		zap.String("avatar_id", event.AvatarID),
