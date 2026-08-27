@@ -4,10 +4,13 @@ package e2e
 import (
 	"encoding/json"
 	"fmt"
+	"image"
+	_ "image/jpeg"
 	"io"
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
 	"github.com/stretchr/testify/require"
@@ -168,4 +171,40 @@ func TestE2E_NotFoundCases(t *testing.T) {
 	var list domain.AvatarListResponse
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&list))
 	require.Empty(t, list.Avatars)
+}
+
+// TestE2E_AsyncThumbnailPipeline drives the full outbox chain
+func TestE2E_AsyncThumbnailPipeline(t *testing.T) {
+	base := startStack(t)
+	token := registerUser(t, base, "pipeline-user")
+
+	res, body := uploadAvatar(t, base, token, "cat.png", pngFixture(t))
+	require.Equal(t, http.StatusCreated, res.StatusCode, string(body))
+	var uploaded domain.AvatarUploadResponse
+	require.NoError(t, json.Unmarshal(body, &uploaded))
+	require.Equal(t, "pending", uploaded.Status)
+
+	var meta domain.AvatarMetadataResponse
+	require.Eventually(t, func() bool {
+		metaRes := doRequest(t, http.MethodGet, base+uploaded.URL+"/metadata", "")
+		defer metaRes.Body.Close()
+		if metaRes.StatusCode != http.StatusOK {
+			return false
+		}
+		if err := json.NewDecoder(metaRes.Body).Decode(&meta); err != nil {
+			return false
+		}
+		return meta.Status == "completed"
+	}, 60*time.Second, 250*time.Millisecond, "avatar never reached completed status")
+
+	require.Len(t, meta.Thumbnails, 2)
+
+	thumbRes := doRequest(t, http.MethodGet, base+uploaded.URL+"?size=100x100", "")
+	defer thumbRes.Body.Close()
+	require.Equal(t, http.StatusOK, thumbRes.StatusCode)
+	require.Equal(t, "image/jpeg", thumbRes.Header.Get("Content-Type"))
+	thumb, _, err := image.Decode(thumbRes.Body)
+	require.NoError(t, err)
+	require.Equal(t, 100, thumb.Bounds().Dx())
+	require.Equal(t, 100, thumb.Bounds().Dy())
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/domain"
 	"github.com/Vla8islav/gophprofile/internal/filestorage"
 	"github.com/Vla8islav/gophprofile/internal/handler"
+	"github.com/Vla8islav/gophprofile/internal/outbox"
 	"github.com/Vla8islav/gophprofile/internal/repository"
 	"github.com/Vla8islav/gophprofile/internal/service"
 	"github.com/Vla8islav/gophprofile/internal/worker"
@@ -39,8 +40,7 @@ var (
 	testStopWorker        context.CancelFunc
 )
 
-// TestMain tears the shared containers down explicitly, so cleanup does not
-// depend on the Ryuk reaper (which some docker environments cannot run).
+// TestMain tears the shared containers down explicitly
 func TestMain(m *testing.M) {
 	code := m.Run()
 	if testStopWorker != nil {
@@ -136,6 +136,8 @@ func startStack(t *testing.T) string {
 		workerCtx, stopWorker := context.WithCancel(context.Background())
 		testStopWorker = stopWorker
 		go func() { _ = consumer.Run(workerCtx, avatarWorker.HandleEvent) }()
+		relay := outbox.NewRelay(db, events, zap.NewNop())
+		go relay.Run(workerCtx)
 
 		svc := service.NewGophprofileService(db, fs, events, zap.NewNop(), cfg.AuthTokenSecret.Value)
 		h := handler.NewHandler(svc, zap.NewNop())
