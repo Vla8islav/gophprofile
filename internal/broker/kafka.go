@@ -99,7 +99,7 @@ func (p *KafkaPublisher) Publish(ctx context.Context, key string, eventType stri
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(time.Duration(attempt) + backoff):
+		case <-time.After(backoff):
 		}
 	}
 }
