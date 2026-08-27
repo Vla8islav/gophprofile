@@ -38,7 +38,7 @@ func (h *Handler) AvatarGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.serveAvatarContent(w, r, avatar, content)
+	h.serveAvatarContent(w, r, avatar, size, content)
 }
 
 // UserAvatarGetHandler godoc
@@ -72,5 +72,5 @@ func (h *Handler) UserAvatarGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.serveAvatarContent(w, r, avatar, content)
+	h.serveAvatarContent(w, r, avatar, size, content)
 }

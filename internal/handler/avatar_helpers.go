@@ -91,7 +91,7 @@ func avatarETag(avatar *domain.Avatar) string {
 	return fmt.Sprintf(`"%s-%d"`, avatar.ID, avatar.UpdatedAt.Unix())
 }
 
-func (h *Handler) serveAvatarContent(w http.ResponseWriter, r *http.Request, avatar *domain.Avatar, content io.ReadCloser) {
+func (h *Handler) serveAvatarContent(w http.ResponseWriter, r *http.Request, avatar *domain.Avatar, sizeVariant string, content io.ReadCloser) {
 	defer func() { _ = content.Close() }()
 
 	etag := avatarETag(avatar)
@@ -102,7 +102,9 @@ func (h *Handler) serveAvatarContent(w http.ResponseWriter, r *http.Request, ava
 		return
 	}
 
-	w.Header().Set("Content-Type", avatar.MimeType)
+	// Thumbnails are always JPEG regardless of the original's format
+	_, contentType := avatar.ContentFor(sizeVariant)
+	w.Header().Set("Content-Type", contentType)
 	if _, err := io.Copy(w, content); err != nil {
 		// Headers are already out; all we can do is log the broken transfer.
 		h.logger.Warn("failed to stream avatar content", zap.Error(err))
