@@ -28,11 +28,13 @@ func (m gophprofileService) DeleteAvatar(ctx context.Context, avatarID string, r
 		return domain.ErrNotAvatarOwner
 	}
 
-	if err := m.repository.SoftDeleteAvatar(ctx, avatarID); err != nil {
+	event, err := domain.NewOutboxEvent(avatar.ID, domain.EventTypeAvatarDeleted, deleteEventFor(avatar))
+	if err != nil {
+		return err
+	}
+	if err := m.repository.SoftDeleteAvatarWithEvent(ctx, avatarID, event); err != nil {
 		return fmt.Errorf("failed to delete avatar %s: %w", avatarID, err)
 	}
-
-	m.publishEvent(ctx, avatar.ID, domain.EventTypeAvatarDeleted, deleteEventFor(avatar))
 	return nil
 }
 
@@ -46,10 +48,12 @@ func (m gophprofileService) DeleteUserAvatar(ctx context.Context, userID int64, 
 		return err
 	}
 
-	if err := m.repository.SoftDeleteAvatar(ctx, avatar.ID); err != nil {
+	event, err := domain.NewOutboxEvent(avatar.ID, domain.EventTypeAvatarDeleted, deleteEventFor(avatar))
+	if err != nil {
+		return err
+	}
+	if err := m.repository.SoftDeleteAvatarWithEvent(ctx, avatar.ID, event); err != nil {
 		return fmt.Errorf("failed to delete avatar %s for user %d: %w", avatar.ID, userID, err)
 	}
-
-	m.publishEvent(ctx, avatar.ID, domain.EventTypeAvatarDeleted, deleteEventFor(avatar))
 	return nil
 }

@@ -37,16 +37,19 @@ func (m gophprofileService) UploadAvatar(ctx context.Context, userID int64, file
 		return nil, fmt.Errorf("failed to upload avatar %s to file storage: %w", avatarID, err)
 	}
 
-	if err := m.repository.SetAvatarUploadStatus(ctx, avatarID, domain.UploadStatusCompleted); err != nil {
-		return nil, fmt.Errorf("failed to mark avatar %s as uploaded: %w", avatarID, err)
-	}
-	avatar.UploadStatus = domain.UploadStatusCompleted
-
-	m.publishEvent(ctx, avatarID, domain.EventTypeAvatarUploaded, domain.AvatarUploadEvent{
+	// Status flip and event enqueue commit atomically (transactional outbox)
+	event, err := domain.NewOutboxEvent(avatarID, domain.EventTypeAvatarUploaded, domain.AvatarUploadEvent{
 		AvatarID: avatarID,
 		UserID:   userID,
 		S3Key:    s3Key,
 	})
+	if err != nil {
+		return nil, err
+	}
+	if err := m.repository.CompleteAvatarUpload(ctx, avatarID, event); err != nil {
+		return nil, fmt.Errorf("failed to mark avatar %s as uploaded: %w", avatarID, err)
+	}
+	avatar.UploadStatus = domain.UploadStatusCompleted
 
 	return avatar, nil
 }

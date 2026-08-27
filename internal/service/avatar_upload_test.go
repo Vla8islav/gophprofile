@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -44,14 +45,19 @@ func TestUploadAvatar_Success(t *testing.T) {
 		Upload(gomock.Any(), gomock.Any(), "image/png", int64(4), gomock.Any()).
 		Return(nil)
 	repo.EXPECT().
-		SetAvatarUploadStatus(gomock.Any(), gomock.Any(), domain.UploadStatusCompleted).
-		Return(nil)
-	events := mocks.NewMockEventPublisher(ctrl)
-	events.EXPECT().
-		Publish(gomock.Any(), gomock.Any(), domain.EventTypeAvatarUploaded, gomock.Any()).
-		Return(nil)
+		CompleteAvatarUpload(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, avatarID string, event domain.OutboxEvent) error {
+			// the enqueued event must describe this avatar
+			require.Equal(t, avatarID, event.Key)
+			require.Equal(t, domain.EventTypeAvatarUploaded, event.Type)
+			var payload domain.AvatarUploadEvent
+			require.NoError(t, json.Unmarshal(event.Payload, &payload))
+			require.Equal(t, avatarID, payload.AvatarID)
+			require.Equal(t, int64(42), payload.UserID)
+			return nil
+		})
 
-	service := gophprofileService{repository: repo, fileStorage: storage, events: events, logger: zap.NewNop()}
+	service := gophprofileService{repository: repo, fileStorage: storage, logger: zap.NewNop()}
 
 	avatar, err := service.UploadAvatar(context.Background(), 42, "cat.png", "image/png", 4, bytes.NewReader([]byte("data")))
 	require.NoError(t, err)
