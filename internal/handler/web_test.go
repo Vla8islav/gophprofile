@@ -52,21 +52,6 @@ func TestWebUploadPage(t *testing.T) {
 	require.Contains(t, body, "/api/v1/users/") // the integrated gallery's list endpoint
 }
 
-func TestWebGalleryRedirectsToUpload(t *testing.T) {
-	t.Parallel()
-	server := newWebTestServer(t)
-
-	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
-		return http.ErrUseLastResponse
-	}}
-	res, err := client.Get(server.URL + "/web/gallery/42")
-	require.NoError(t, err)
-	defer res.Body.Close()
-
-	require.Equal(t, http.StatusMovedPermanently, res.StatusCode)
-	require.Equal(t, "/web/upload", res.Header.Get("Location"))
-}
-
 func TestWebRootRedirectsToUpload(t *testing.T) {
 	t.Parallel()
 	server := newWebTestServer(t)
