@@ -3,21 +3,26 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/Vla8islav/gophprofile/internal/broker"
 	"github.com/Vla8islav/gophprofile/internal/config"
 	"github.com/Vla8islav/gophprofile/internal/filestorage"
 	"github.com/Vla8islav/gophprofile/internal/repository"
 	"github.com/Vla8islav/gophprofile/internal/worker"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
 const consumerGroupID = "gophprofile-worker"
+const metricsAddress = ":9091"
 
 func main() {
 	lg, err := zap.NewProduction()
@@ -59,6 +64,20 @@ func main() {
 	)
 	avatarWorker := worker.New(db, fileStorage, lg)
 
+	// metrics
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle("/metrics", promhttp.Handler())
+	metricsMux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	metricsSrv := &http.Server{Addr: metricsAddress, Handler: metricsMux}
+	go func() {
+		lg.Info("metrics server listening", zap.String("addr", metricsAddress))
+		if err := metricsSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			lg.Error("metrics server failed", zap.Error(err))
+		}
+	}()
+
 	lg.Info("worker starting",
 		zap.String("topic", currentConfig.KafkaTopic.Value),
 		zap.String("group", consumerGroupID),
@@ -66,5 +85,12 @@ func main() {
 	if err := consumer.Run(ctx, avatarWorker.HandleEvent); err != nil {
 		lg.Fatal("consumer stopped", zap.Error(err))
 	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := metricsSrv.Shutdown(shutdownCtx); err != nil {
+		lg.Warn("metrics server shutdown", zap.Error(err))
+	}
+
 	lg.Info("worker stopped gracefully")
 }
