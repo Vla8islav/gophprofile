@@ -11,3 +11,7 @@ scrape_configs:
   - job_name: gophprofile-server
     static_configs:
       - targets: ["gophprofile:8080"]
+
+  - job_name: gophprofile-worker
+    static_configs:
+      - targets: ["worker:9091"]
