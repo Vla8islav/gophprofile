@@ -42,6 +42,20 @@ func (m *MockGophprofileRepository) EXPECT() *MockGophprofileRepositoryMockRecor
 	return m.recorder
 }
 
+// CompleteAvatarUpload mocks base method.
+func (m *MockGophprofileRepository) CompleteAvatarUpload(ctx context.Context, avatarID string, event domain.OutboxEvent) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompleteAvatarUpload", ctx, avatarID, event)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CompleteAvatarUpload indicates an expected call of CompleteAvatarUpload.
+func (mr *MockGophprofileRepositoryMockRecorder) CompleteAvatarUpload(ctx, avatarID, event any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteAvatarUpload", reflect.TypeOf((*MockGophprofileRepository)(nil).CompleteAvatarUpload), ctx, avatarID, event)
+}
+
 // CreateAvatar mocks base method.
 func (m *MockGophprofileRepository) CreateAvatar(ctx context.Context, params domain.CreateAvatarParams) (*domain.Avatar, error) {
 	m.ctrl.T.Helper()
@@ -132,6 +146,20 @@ func (mr *MockGophprofileRepositoryMockRecorder) ListAvatarsByUserID(ctx, userID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAvatarsByUserID", reflect.TypeOf((*MockGophprofileRepository)(nil).ListAvatarsByUserID), ctx, userID)
 }
 
+// MarkOutboxEventSent mocks base method.
+func (m *MockGophprofileRepository) MarkOutboxEventSent(ctx context.Context, eventID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkOutboxEventSent", ctx, eventID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkOutboxEventSent indicates an expected call of MarkOutboxEventSent.
+func (mr *MockGophprofileRepositoryMockRecorder) MarkOutboxEventSent(ctx, eventID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkOutboxEventSent", reflect.TypeOf((*MockGophprofileRepository)(nil).MarkOutboxEventSent), ctx, eventID)
+}
+
 // Ping mocks base method.
 func (m *MockGophprofileRepository) Ping(ctx context.Context) error {
 	m.ctrl.T.Helper()
@@ -200,6 +228,35 @@ func (m *MockGophprofileRepository) SoftDeleteAvatar(ctx context.Context, avatar
 func (mr *MockGophprofileRepositoryMockRecorder) SoftDeleteAvatar(ctx, avatarID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SoftDeleteAvatar", reflect.TypeOf((*MockGophprofileRepository)(nil).SoftDeleteAvatar), ctx, avatarID)
+}
+
+// SoftDeleteAvatarWithEvent mocks base method.
+func (m *MockGophprofileRepository) SoftDeleteAvatarWithEvent(ctx context.Context, avatarID string, event domain.OutboxEvent) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SoftDeleteAvatarWithEvent", ctx, avatarID, event)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SoftDeleteAvatarWithEvent indicates an expected call of SoftDeleteAvatarWithEvent.
+func (mr *MockGophprofileRepositoryMockRecorder) SoftDeleteAvatarWithEvent(ctx, avatarID, event any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SoftDeleteAvatarWithEvent", reflect.TypeOf((*MockGophprofileRepository)(nil).SoftDeleteAvatarWithEvent), ctx, avatarID, event)
+}
+
+// UnsentOutboxEvents mocks base method.
+func (m *MockGophprofileRepository) UnsentOutboxEvents(ctx context.Context, limit int) ([]domain.OutboxEvent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnsentOutboxEvents", ctx, limit)
+	ret0, _ := ret[0].([]domain.OutboxEvent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnsentOutboxEvents indicates an expected call of UnsentOutboxEvents.
+func (mr *MockGophprofileRepositoryMockRecorder) UnsentOutboxEvents(ctx, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnsentOutboxEvents", reflect.TypeOf((*MockGophprofileRepository)(nil).UnsentOutboxEvents), ctx, limit)
 }
 
 // MockGophprofileService is a mock of GophprofileService interface.

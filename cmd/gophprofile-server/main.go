@@ -29,7 +29,7 @@ func main() {
 
 	currentConfig, err := config.ReadFlagsServer(os.Args[1:], lg)
 	if err != nil {
-		lg.Fatal("failed to read config" + err.Error())
+		lg.Fatal("failed to read config", zap.Error(err))
 		return
 	}
 	lg.Info("starting server ", zap.String("Server addr", currentConfig.ServerAddress.Value))
@@ -39,7 +39,7 @@ func main() {
 
 	db, err := repository.WrapPostgres(currentConfig)
 	if err != nil {
-		lg.Fatal("init db: " + err.Error())
+		lg.Fatal("init db: ", zap.Error(err))
 	}
 
 	err = run.Run(ctx, db, currentConfig, lg)

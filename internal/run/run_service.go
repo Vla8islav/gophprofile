@@ -15,6 +15,7 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/filestorage"
 	"github.com/Vla8islav/gophprofile/internal/handler"
 	"github.com/Vla8islav/gophprofile/internal/middlewares"
+	"github.com/Vla8islav/gophprofile/internal/outbox"
 	"github.com/Vla8islav/gophprofile/internal/service"
 	"go.uber.org/zap"
 )
@@ -37,6 +38,10 @@ func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.Optio
 		cfg.KafkaTopic.Value,
 	)
 	defer func() { _ = events.Close() }()
+
+	// relay ships enqueued events to Kafka in the background
+	relay := outbox.NewRelay(db, events, logger)
+	go relay.Run(ctx)
 
 	srvApp := service.NewGophprofileService(db, fs, events, logger,
 		cfg.AuthTokenSecret.Value)

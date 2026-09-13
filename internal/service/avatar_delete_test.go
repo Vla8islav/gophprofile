@@ -19,13 +19,15 @@ func TestDeleteAvatar_Success(t *testing.T) {
 	repo := mocks.NewMockGophprofileRepository(ctrl)
 	repo.EXPECT().GetAvatarByID(gomock.Any(), "id-1").
 		Return(&domain.Avatar{ID: "id-1", UserID: 42}, nil)
-	repo.EXPECT().SoftDeleteAvatar(gomock.Any(), "id-1").Return(nil)
-	events := mocks.NewMockEventPublisher(ctrl)
-	events.EXPECT().
-		Publish(gomock.Any(), "id-1", domain.EventTypeAvatarDeleted, gomock.Any()).
-		Return(nil)
+	repo.EXPECT().
+		SoftDeleteAvatarWithEvent(gomock.Any(), "id-1", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, event domain.OutboxEvent) error {
+			require.Equal(t, "id-1", event.Key)
+			require.Equal(t, domain.EventTypeAvatarDeleted, event.Type)
+			return nil
+		})
 
-	service := gophprofileService{repository: repo, events: events, logger: zap.NewNop()}
+	service := gophprofileService{repository: repo, logger: zap.NewNop()}
 
 	require.NoError(t, service.DeleteAvatar(context.Background(), "id-1", 42))
 }
@@ -68,13 +70,15 @@ func TestDeleteUserAvatar_Success(t *testing.T) {
 	repo := mocks.NewMockGophprofileRepository(ctrl)
 	repo.EXPECT().GetLatestAvatarByUserID(gomock.Any(), int64(42)).
 		Return(&domain.Avatar{ID: "id-1", UserID: 42}, nil)
-	repo.EXPECT().SoftDeleteAvatar(gomock.Any(), "id-1").Return(nil)
-	events := mocks.NewMockEventPublisher(ctrl)
-	events.EXPECT().
-		Publish(gomock.Any(), "id-1", domain.EventTypeAvatarDeleted, gomock.Any()).
-		Return(nil)
+	repo.EXPECT().
+		SoftDeleteAvatarWithEvent(gomock.Any(), "id-1", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, event domain.OutboxEvent) error {
+			require.Equal(t, "id-1", event.Key)
+			require.Equal(t, domain.EventTypeAvatarDeleted, event.Type)
+			return nil
+		})
 
-	service := gophprofileService{repository: repo, events: events, logger: zap.NewNop()}
+	service := gophprofileService{repository: repo, logger: zap.NewNop()}
 
 	require.NoError(t, service.DeleteUserAvatar(context.Background(), 42, 42))
 }

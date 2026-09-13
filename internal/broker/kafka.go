@@ -95,10 +95,11 @@ func (p *KafkaPublisher) Publish(ctx context.Context, key string, eventType stri
 		if attempt >= publishMaxAttempts || !isRetriablePublishError(err) {
 			return fmt.Errorf("publish %s to %s: %w", eventType, p.topic, err)
 		}
+		backoff := publishRetryDelay << (attempt - 1)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(time.Duration(attempt) * publishRetryDelay):
+		case <-time.After(backoff):
 		}
 	}
 }
