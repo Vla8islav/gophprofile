@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"github.com/Vla8islav/gophprofile/internal/config"
@@ -22,6 +23,9 @@ func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 	r.Get("/api/ping", h.DBPing)
 	r.Post("/api/user/register", h.UserRegisterHandler)
 	r.Post("/api/user/login", h.UserLoginHandler)
+
+	// Metrics
+	r.Handle("/metrics", promhttp.Handler())
 
 	// web interface
 	r.Get("/web", func(w http.ResponseWriter, r *http.Request) {

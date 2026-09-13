@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+scrape_configs:
+  # prometheus scraping itself, it should always work
+  - job_name: prometheus
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  - job_name: gophprofile-server
+    static_configs:
+      - targets: ["gophprofile:8080"]
