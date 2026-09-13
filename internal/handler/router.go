@@ -15,6 +15,7 @@ import (
 func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.StripSlashes)
+	r.Use(middlewares.WithMetrics)
 
 	// Swagger UI
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
