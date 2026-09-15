@@ -3,16 +3,32 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 func enqueueOutboxTx(ctx context.Context, tx *sql.Tx, event domain.OutboxEvent) error {
+	carrier := propagation.MapCarrier{}
+	otel.GetTextMapPropagator().Inject(ctx, carrier)
+
+	var traceContext any
+	if len(carrier) > 0 {
+		b, err := json.Marshal(carrier)
+		if err != nil {
+			return fmt.Errorf("marshal trace context: %w", err)
+		}
+		traceContext = b
+	}
+
 	_, err := tx.ExecContext(ctx,
-		`INSERT INTO outbox_events (event_key, event_type, payload)
-		 VALUES ($1, $2, $3)`,
+		`INSERT INTO outbox_events (event_key, event_type, payload, trace_context)
+		 VALUES ($1, $2, $3, $4)`,
 		event.Key, event.Type, []byte(event.Payload),
+		traceContext,
 	)
 	if err != nil {
 		return fmt.Errorf("enqueue outbox event %s: %w", event.Type, err)
@@ -72,7 +88,7 @@ func (s *PostgresStorage) UnsentOutboxEvents(ctx context.Context, limit int) ([]
 
 	err := s.withRetry(ctx, func() error {
 		rows, err := s.db.QueryContext(ctx,
-			`SELECT id, event_key, event_type, payload, created_at
+			`SELECT id, event_key, event_type, payload, created_at, trace_context
 			 FROM outbox_events
 			 WHERE sent_at IS NULL
 			 ORDER BY id
@@ -88,10 +104,18 @@ func (s *PostgresStorage) UnsentOutboxEvents(ctx context.Context, limit int) ([]
 		for rows.Next() {
 			var event domain.OutboxEvent
 			var payload []byte
-			if err := rows.Scan(&event.ID, &event.Key, &event.Type, &payload, &event.CreatedAt); err != nil {
+			var traceContext []byte
+
+			if err := rows.Scan(&event.ID, &event.Key, &event.Type, &payload,
+				&event.CreatedAt, &traceContext); err != nil {
 				return fmt.Errorf("failed to scan outbox event: %w", err)
 			}
 			event.Payload = payload
+			if traceContext != nil {
+				if err := json.Unmarshal(traceContext, &event.TraceContext); err != nil {
+					return fmt.Errorf("failed to decode trace context for event %d: %w", event.ID, err)
+				}
+			}
 			events = append(events, event)
 		}
 		return rows.Err()

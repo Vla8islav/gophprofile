@@ -3,6 +3,7 @@ package outbox
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.opentelemetry.io/otel"
 )
 
 var (
@@ -23,3 +24,5 @@ var (
 		Help: "Age of the oldest unpublished outbox event; 0 when the outbox is empty.",
 	})
 )
+
+var tracer = otel.Tracer("gophprofile/outbox")
