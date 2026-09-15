@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/riandyrn/otelchi"
@@ -16,7 +17,12 @@ import (
 func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.StripSlashes)
-	r.Use(otelchi.Middleware("gophprofile-server", otelchi.WithChiRoutes(r)))
+	r.Use(otelchi.Middleware("gophprofile-server", otelchi.WithChiRoutes(r),
+		otelchi.WithFilter(func(r *http.Request) bool {
+			return r.URL.Path != "/metrics" &&
+				r.URL.Path != "/health" &&
+				strings.HasPrefix(r.URL.Path, "/web/static/") // don't trace garbage requests
+		})))
 	r.Use(middlewares.WithMetrics)
 
 	// Swagger UI
