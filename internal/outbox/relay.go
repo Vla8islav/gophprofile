@@ -70,13 +70,7 @@ func (r *Relay) drain(ctx context.Context) {
 
 		for _, event := range events {
 			if err := r.relayOne(ctx, event); err != nil {
-				r.logger.Warn("outbox: publish failed, will retry next tick",
-					zap.Int64("event_id", event.ID),
-					zap.String("type", event.Type),
-					zap.Error(err),
-				)
-				outboxPublishFailures.Inc()
-				return
+				return // relayOne already logged and counted the failure
 			}
 		}
 	}
@@ -90,6 +84,12 @@ func (r *Relay) relayOne(ctx context.Context, event domain.OutboxEvent) error {
 	if err := r.publisher.Publish(ctx, event.Key, event.Type, event.Payload); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
+		outboxPublishFailures.Inc()
+		r.logger.Warn("outbox: publish failed, will retry next tick",
+			zap.Int64("event_id", event.ID),
+			zap.String("type", event.Type),
+			zap.Error(err),
+		)
 		return err
 	}
 	outboxPublished.Inc()
@@ -97,6 +97,10 @@ func (r *Relay) relayOne(ctx context.Context, event domain.OutboxEvent) error {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		outboxMarkFailures.Inc()
+		r.logger.Error("outbox: failed to mark event sent",
+			zap.Int64("event_id", event.ID),
+			zap.Error(err),
+		)
 		return err
 	}
 	return nil
