@@ -21,7 +21,7 @@ func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 		otelchi.WithFilter(func(r *http.Request) bool {
 			return r.URL.Path != "/metrics" &&
 				r.URL.Path != "/health" &&
-				strings.HasPrefix(r.URL.Path, "/web/static/") // don't trace garbage requests
+				!strings.HasPrefix(r.URL.Path, "/web/static/") // don't trace garbage requests
 		})))
 	r.Use(middlewares.WithMetrics)
 
