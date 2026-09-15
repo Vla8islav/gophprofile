@@ -9,6 +9,8 @@ import (
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
 	"github.com/segmentio/kafka-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -59,9 +61,16 @@ func (c *KafkaConsumer) Run(ctx context.Context, handle EventHandler) error {
 				zap.Int64("offset", message.Offset),
 				zap.Error(err),
 			)
-		} else if err := c.handleWithRetry(ctx, handle, envelope, message); err != nil {
-			// shutdown mid-retry
-			return nil
+
+		} else {
+			msgCtx := otel.GetTextMapPropagator().Extract(ctx, kafkaHeaderCarrier{&message.Headers})
+			msgCtx, span := tracer.Start(msgCtx, "consume "+envelope.Type,
+				trace.WithSpanKind(trace.SpanKindConsumer))
+			err := c.handleWithRetry(msgCtx, handle, envelope, message)
+			span.End()
+			if err != nil {
+				return nil // shutdown mid-retry
+			}
 		}
 
 		if err := c.reader.CommitMessages(ctx, message); err != nil {

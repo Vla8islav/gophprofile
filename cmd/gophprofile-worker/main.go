@@ -41,7 +41,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	shutdownTracing, err := tracing.Init(ctx, "gophprofile-server")
+	shutdownTracing, err := tracing.Init(ctx, "gophprofile-worker")
 	if err != nil {
 		lg.Fatal("init tracing", zap.Error(err))
 	}
