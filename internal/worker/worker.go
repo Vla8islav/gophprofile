@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Vla8islav/gophprofile/internal/broker"
 	"github.com/Vla8islav/gophprofile/internal/domain"
@@ -62,8 +63,10 @@ func (w *Worker) handleUploaded(ctx context.Context, event domain.AvatarUploadEv
 		return nil
 	}
 
+	start := time.Now()
 	err = w.generateThumbnails(ctx, avatar)
 	if err == nil {
+		thumbnailDuration.Observe(time.Since(start).Seconds())
 		w.logger.Info("thumbnails generated",
 			zap.String("avatar_id", event.AvatarID))
 		return nil

@@ -52,6 +52,7 @@ func (c *KafkaConsumer) Run(ctx context.Context, handle EventHandler) error {
 		var envelope domain.EventEnvelope
 		if err := json.Unmarshal(message.Value, &envelope); err != nil {
 			// garbage
+			consumerEvents.WithLabelValues("malformed").Inc()
 			c.logger.Error("skipping malformed event",
 				zap.String("key", string(message.Key)),
 				zap.Int("partition", message.Partition),
@@ -77,9 +78,11 @@ func (c *KafkaConsumer) handleWithRetry(ctx context.Context, handle EventHandler
 	for attempt := 1; ; attempt++ {
 		err := handle(ctx, envelope)
 		if err == nil {
+			consumerEvents.WithLabelValues("ok").Inc()
 			return nil
 		}
 		if IsPermanent(err) {
+			consumerEvents.WithLabelValues("permanent").Inc()
 			c.logger.Error("dropping event after permanent failure",
 				zap.String("type", envelope.Type),
 				zap.String("key", string(message.Key)),
@@ -99,6 +102,7 @@ func (c *KafkaConsumer) handleWithRetry(ctx context.Context, handle EventHandler
 			zap.Duration("backoff", backoff),
 			zap.Error(err),
 		)
+		consumerEvents.WithLabelValues("retry").Inc()
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
