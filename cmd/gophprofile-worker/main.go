@@ -16,6 +16,7 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/config"
 	"github.com/Vla8islav/gophprofile/internal/filestorage"
 	"github.com/Vla8islav/gophprofile/internal/repository"
+	"github.com/Vla8islav/gophprofile/internal/tracing"
 	"github.com/Vla8islav/gophprofile/internal/worker"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
@@ -39,6 +40,18 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	shutdownTracing, err := tracing.Init(ctx, "gophprofile-server")
+	if err != nil {
+		lg.Fatal("init tracing", zap.Error(err))
+	}
+	defer func() {
+		flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdownTracing(flushCtx); err != nil {
+			lg.Warn("tracing shutdown", zap.Error(err))
+		}
+	}()
 
 	db, err := repository.NewPostgresStorage(currentConfig, "")
 	if err != nil {

@@ -4,11 +4,13 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/Vla8islav/gophprofile/docs" // generated OpenAPI spec (swag init)
 	"github.com/Vla8islav/gophprofile/internal/config"
 	"github.com/Vla8islav/gophprofile/internal/repository"
 	"github.com/Vla8islav/gophprofile/internal/run"
+	"github.com/Vla8islav/gophprofile/internal/tracing"
 	"go.uber.org/zap"
 )
 
@@ -36,6 +38,18 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	shutdownTracing, err := tracing.Init(ctx, "gophprofile-server")
+	if err != nil {
+		lg.Fatal("init tracing", zap.Error(err))
+	}
+	defer func() {
+		flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdownTracing(flushCtx); err != nil {
+			lg.Warn("tracing shutdown", zap.Error(err))
+		}
+	}()
 
 	db, err := repository.WrapPostgres(currentConfig)
 	if err != nil {

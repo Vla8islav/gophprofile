@@ -81,6 +81,7 @@ services:
       KAFKA_BROKERS: "kafka:9092"
       KAFKA_TOPIC: "avatar-events"
       AUDIT_LOG_PATH: "/var/log/gophprofile/audit.jsonl"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     volumes:
       - audit_logs:/var/log/gophprofile
     ports:
@@ -106,6 +107,7 @@ services:
       S3_BUCKET: "avatars"
       KAFKA_BROKERS: "kafka:9092"
       KAFKA_TOPIC: "avatar-events"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     ports:
       - '9091:9091'
 
@@ -132,6 +134,13 @@ services:
       - '3000:3000'
     depends_on:
       - prometheus
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    container_name: jaeger
+    restart: unless-stopped
+    ports:
+      - '16686:16686' # UI
 
 volumes:
   postgres_data:
