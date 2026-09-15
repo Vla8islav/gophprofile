@@ -17,6 +17,7 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/middlewares"
 	"github.com/Vla8islav/gophprofile/internal/outbox"
 	"github.com/Vla8islav/gophprofile/internal/service"
+	"github.com/Vla8islav/gophprofile/internal/servicemetrics"
 	"go.uber.org/zap"
 )
 
@@ -43,8 +44,8 @@ func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.Optio
 	relay := outbox.NewRelay(db, events, logger)
 	go relay.Run(ctx)
 
-	srvApp := service.NewGophprofileService(db, fs, events, logger,
-		cfg.AuthTokenSecret.Value)
+	srvApp := servicemetrics.Wrap(service.NewGophprofileService(db, fs, events, logger,
+		cfg.AuthTokenSecret.Value))
 
 	h := handler.NewHandler(srvApp, logger)
 	r := handler.NewRouter(h, cfg)
