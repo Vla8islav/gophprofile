@@ -58,9 +58,12 @@ func (r *Relay) drain(ctx context.Context) {
 			r.logger.Error("outbox: failed to list unsent events", zap.Error(err))
 			return
 		}
+
 		if len(events) == 0 {
+			outboxOldestPendingAge.Set(0)
 			return
 		}
+		outboxOldestPendingAge.Set(time.Since(events[0].CreatedAt).Seconds())
 
 		for _, event := range events {
 			if err := r.publisher.Publish(ctx, event.Key, event.Type, event.Payload); err != nil {
@@ -69,9 +72,12 @@ func (r *Relay) drain(ctx context.Context) {
 					zap.String("type", event.Type),
 					zap.Error(err),
 				)
+				outboxPublishFailures.Inc()
 				return
 			}
+			outboxPublished.Inc()
 			if err := r.repository.MarkOutboxEventSent(ctx, event.ID); err != nil {
+				outboxMarkFailures.Inc()
 				// The event WAS published
 				r.logger.Error("outbox: failed to mark event sent",
 					zap.Int64("event_id", event.ID),
