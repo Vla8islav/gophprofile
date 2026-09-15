@@ -106,6 +106,8 @@ services:
       S3_BUCKET: "avatars"
       KAFKA_BROKERS: "kafka:9092"
       KAFKA_TOPIC: "avatar-events"
+    ports:
+      - '9091:9091'
 
   prometheus:
     image: prom/prometheus:latest
