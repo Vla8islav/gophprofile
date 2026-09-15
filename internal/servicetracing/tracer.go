@@ -10,6 +10,7 @@ import (
 )
 
 var tracer = otel.Tracer("gophprofile/service")
+var _ domain.GophprofileService = (*withTracing)(nil) // compile guard
 
 type withTracing struct {
 	next domain.GophprofileService
