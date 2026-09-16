@@ -2,6 +2,7 @@ package servicemetrics
 
 import (
 	"context"
+	"errors"
 	"io"
 	"time"
 
@@ -116,8 +117,21 @@ func Wrap(next domain.GophprofileService) domain.GophprofileService {
 
 func observe(method string, start time.Time, err error) {
 	result := "ok"
-	if err != nil {
-		result = "error"
+
+	switch {
+	case err == nil:
+	case errors.Is(err, domain.ErrAvatarNotFound):
+		result = "not_found"
+	case errors.Is(err, domain.ErrInvalidUserCredentials):
+		result = "unauthorized"
+	case errors.Is(err, domain.ErrNotAvatarOwner):
+		result = "forbidden"
+	case errors.Is(err, domain.ErrUnsupportedAvatarFormat):
+		result = "invalid_input"
+	case domain.IsBusinessErr(err):
+		result = "rejected" // business outcome - no label
+	default:
+		result = "error" // real failure
 	}
 	serviceOps.WithLabelValues(method, result).Inc()
 	serviceDuration.WithLabelValues(method).Observe(time.Since(start).Seconds())

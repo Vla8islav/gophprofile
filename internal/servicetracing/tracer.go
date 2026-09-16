@@ -21,7 +21,7 @@ func (t *withTracing) Ping(ctx context.Context) error {
 	defer span.End()
 
 	err := t.next.Ping(ctx)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
@@ -33,7 +33,7 @@ func (t *withTracing) FileStoragePing(ctx context.Context) error {
 	defer span.End()
 
 	err := t.next.FileStoragePing(ctx)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
@@ -45,7 +45,7 @@ func (t *withTracing) BrokerPing(ctx context.Context) error {
 	defer span.End()
 
 	err := t.next.BrokerPing(ctx)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
@@ -57,7 +57,7 @@ func (t *withTracing) CreateUser(ctx context.Context, request domain.UserRegiste
 	defer span.End()
 
 	a, err := t.next.CreateUser(ctx, request)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
@@ -69,7 +69,7 @@ func (t *withTracing) LoginUser(ctx context.Context, request domain.UserLoginReq
 	defer span.End()
 
 	a, err := t.next.LoginUser(ctx, request)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
@@ -81,7 +81,7 @@ func (t *withTracing) GetAvatarContent(ctx context.Context, avatarID string, siz
 	defer span.End()
 
 	a, r, err := t.next.GetAvatarContent(ctx, avatarID, sizeVariant)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
@@ -93,7 +93,7 @@ func (t *withTracing) GetUserAvatarContent(ctx context.Context, userID int64, si
 	defer span.End()
 
 	a, r, err := t.next.GetUserAvatarContent(ctx, userID, sizeVariant)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
@@ -105,7 +105,7 @@ func (t *withTracing) GetAvatarMetadata(ctx context.Context, avatarID string) (*
 	defer span.End()
 
 	a, err := t.next.GetAvatarMetadata(ctx, avatarID)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
@@ -117,7 +117,7 @@ func (t *withTracing) ListUserAvatars(ctx context.Context, userID int64) ([]doma
 	defer span.End()
 
 	a, err := t.next.ListUserAvatars(ctx, userID)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
@@ -130,7 +130,7 @@ func (t *withTracing) DeleteAvatar(ctx context.Context, avatarID string, request
 	defer span.End()
 
 	err := t.next.DeleteAvatar(ctx, avatarID, requesterID)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
@@ -142,7 +142,7 @@ func (t *withTracing) DeleteUserAvatar(ctx context.Context, userID int64, reques
 	defer span.End()
 
 	err := t.next.DeleteUserAvatar(ctx, userID, requesterID)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
@@ -158,7 +158,7 @@ func (t *withTracing) UploadAvatar(ctx context.Context, userID int64, fileName, 
 	defer span.End()
 
 	a, err := t.next.UploadAvatar(ctx, userID, fileName, mimeType, size, content)
-	if err != nil {
+	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}

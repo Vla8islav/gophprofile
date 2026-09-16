@@ -18,10 +18,11 @@ func (s *PostgresStorage) GetUserByLogin(ctx context.Context, login string) (*do
 			login,
 		).Scan(&user.ID, &user.Login, &user.PasswordHash)
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrUserNotFound
+			return domain.ErrUserNotFound
 		}
+
 		if err != nil {
-			return fmt.Errorf("failed to get a user by login %s: %w", user.Login, err)
+			return fmt.Errorf("failed to get a user by login %s: %w", login, err)
 		}
 		return nil
 	})
