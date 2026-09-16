@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -30,12 +31,23 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to initialize logger: %v", err)
 	}
-	defer lg.Sync()
+
+	err = run(lg)
+	if err != nil {
+		lg.Error("worker failed", zap.Error(err))
+	}
+	_ = lg.Sync()
+	if err != nil {
+		os.Exit(1)
+	}
+}
+
+func run(lg *zap.Logger) error {
 
 	// same flag pools
 	currentConfig, err := config.ReadFlagsServer(os.Args[1:], lg)
 	if err != nil {
-		lg.Fatal("failed to read config", zap.Error(err))
+		return fmt.Errorf("failed to read config %w", err)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -43,7 +55,7 @@ func main() {
 
 	shutdownTracing, err := tracing.Init(ctx, "gophprofile-worker")
 	if err != nil {
-		lg.Fatal("init tracing", zap.Error(err))
+		return fmt.Errorf("init tracing %w", err)
 	}
 	defer func() {
 		flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -55,7 +67,7 @@ func main() {
 
 	db, err := repository.NewPostgresStorage(currentConfig, "")
 	if err != nil {
-		lg.Fatal("init db", zap.Error(err))
+		return fmt.Errorf("init db %w", err)
 	}
 
 	fileStorage, err := filestorage.NewMinioStorage(ctx,
@@ -66,7 +78,7 @@ func main() {
 		currentConfig.S3UseSSL.Value,
 	)
 	if err != nil {
-		lg.Fatal("init file storage", zap.Error(err))
+		return fmt.Errorf("init file storage %w", err)
 	}
 
 	consumer := broker.NewKafkaConsumer(
@@ -95,15 +107,18 @@ func main() {
 		zap.String("topic", currentConfig.KafkaTopic.Value),
 		zap.String("group", consumerGroupID),
 	)
-	if err := consumer.Run(ctx, avatarWorker.HandleEvent); err != nil {
-		lg.Fatal("consumer stopped", zap.Error(err))
+	if err = consumer.Run(ctx, avatarWorker.HandleEvent); err != nil {
+		return fmt.Errorf("consumer stopped %w", err)
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := metricsSrv.Shutdown(shutdownCtx); err != nil {
-		lg.Warn("metrics server shutdown", zap.Error(err))
-	}
-
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := metricsSrv.Shutdown(shutdownCtx); err != nil {
+			lg.Warn("metrics server shutdown", zap.Error(err))
+		}
+	}()
 	lg.Info("worker stopped gracefully")
+
+	return err
 }
