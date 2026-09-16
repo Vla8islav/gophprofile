@@ -75,7 +75,7 @@ func main() {
 		consumerGroupID,
 		lg,
 	)
-	avatarWorker := worker.New(db, fileStorage, lg)
+	avatarWorker := worker.New(db, fileStorage)
 
 	// metrics
 	metricsMux := http.NewServeMux()

@@ -10,17 +10,17 @@ import (
 
 	"github.com/Vla8islav/gophprofile/internal/broker"
 	"github.com/Vla8islav/gophprofile/internal/domain"
+	"github.com/Vla8islav/gophprofile/internal/logging"
 	"go.uber.org/zap"
 )
 
 type Worker struct {
 	repository  domain.GophprofileRepository
 	fileStorage domain.FileStorage
-	logger      *zap.Logger
 }
 
-func New(repository domain.GophprofileRepository, fileStorage domain.FileStorage, logger *zap.Logger) *Worker {
-	return &Worker{repository: repository, fileStorage: fileStorage, logger: logger}
+func New(repository domain.GophprofileRepository, fileStorage domain.FileStorage) *Worker {
+	return &Worker{repository: repository, fileStorage: fileStorage}
 }
 
 // HandleEvent dispatches one envelope
@@ -39,7 +39,7 @@ func (w *Worker) HandleEvent(ctx context.Context, envelope domain.EventEnvelope)
 		}
 		return w.handleDeleted(ctx, event)
 	default:
-		w.logger.Warn("ignoring unknown event type", zap.String("type", envelope.Type))
+		logging.From(ctx).Warn("ignoring unknown event type", zap.String("type", envelope.Type))
 		return nil
 	}
 }
@@ -48,7 +48,7 @@ func (w *Worker) HandleEvent(ctx context.Context, envelope domain.EventEnvelope)
 func (w *Worker) handleUploaded(ctx context.Context, event domain.AvatarUploadEvent) error {
 	avatar, err := w.repository.GetAvatarByID(ctx, event.AvatarID)
 	if errors.Is(err, domain.ErrAvatarNotFound) {
-		w.logger.Info("avatar gone before processing, skipping",
+		logging.From(ctx).Info("avatar gone before processing, skipping",
 			zap.String("avatar_id", event.AvatarID))
 		return nil
 	}
@@ -58,7 +58,7 @@ func (w *Worker) handleUploaded(ctx context.Context, event domain.AvatarUploadEv
 
 	// Idempotency: a redelivered event for an already-processed avatar is a no-op.
 	if avatar.ProcessingStatus == domain.ProcessingStatusCompleted {
-		w.logger.Info("avatar already processed, skipping",
+		logging.From(ctx).Info("avatar already processed, skipping",
 			zap.String("avatar_id", event.AvatarID))
 		return nil
 	}
@@ -67,7 +67,7 @@ func (w *Worker) handleUploaded(ctx context.Context, event domain.AvatarUploadEv
 	err = w.generateThumbnails(ctx, avatar)
 	if err == nil {
 		thumbnailDuration.Observe(time.Since(start).Seconds())
-		w.logger.Info("thumbnails generated",
+		logging.From(ctx).Info("thumbnails generated",
 			zap.String("avatar_id", event.AvatarID))
 		return nil
 	}
@@ -77,7 +77,7 @@ func (w *Worker) handleUploaded(ctx context.Context, event domain.AvatarUploadEv
 	if broker.IsPermanent(err) {
 		if markErr := w.repository.SetAvatarProcessingStatus(ctx,
 			event.AvatarID, domain.ProcessingStatusFailed); markErr != nil {
-			w.logger.Error("failed to mark avatar as failed",
+			logging.From(ctx).Error("failed to mark avatar as failed",
 				zap.String("avatar_id", event.AvatarID), zap.Error(markErr))
 		}
 	}
@@ -89,7 +89,7 @@ func (w *Worker) handleDeleted(ctx context.Context, event domain.AvatarDeleteEve
 	var failed []string
 	for _, key := range event.S3Keys {
 		if err := w.fileStorage.Delete(ctx, key); err != nil {
-			w.logger.Warn("failed to delete object",
+			logging.From(ctx).Warn("failed to delete object",
 				zap.String("avatar_id", event.AvatarID),
 				zap.String("key", key),
 				zap.Error(err),
@@ -101,7 +101,7 @@ func (w *Worker) handleDeleted(ctx context.Context, event domain.AvatarDeleteEve
 		return fmt.Errorf("delete %d/%d objects for avatar %s",
 			len(failed), len(event.S3Keys), event.AvatarID)
 	}
-	w.logger.Info("avatar objects deleted",
+	logging.From(ctx).Info("avatar objects deleted",
 		zap.String("avatar_id", event.AvatarID),
 		zap.Int("count", len(event.S3Keys)))
 	return nil

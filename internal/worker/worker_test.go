@@ -15,7 +15,6 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/mocks"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"go.uber.org/zap"
 )
 
 func envelopeFor(t *testing.T, eventType string, payload any) domain.EventEnvelope {
@@ -62,7 +61,7 @@ func TestHandleEvent_Uploaded_GeneratesThumbnails(t *testing.T) {
 			return nil
 		})
 
-	w := New(repo, storage, zap.NewNop())
+	w := New(repo, storage)
 	err := w.HandleEvent(context.Background(),
 		envelopeFor(t, domain.EventTypeAvatarUploaded, domain.AvatarUploadEvent{AvatarID: "av-1"}))
 	require.NoError(t, err)
@@ -78,7 +77,7 @@ func TestHandleEvent_Uploaded_SkipsAlreadyCompleted(t *testing.T) {
 		Return(&domain.Avatar{ID: "av-1", ProcessingStatus: domain.ProcessingStatusCompleted}, nil)
 	// no storage expectations: nothing may be downloaded or uploaded
 
-	w := New(repo, mocks.NewMockFileStorage(ctrl), zap.NewNop())
+	w := New(repo, mocks.NewMockFileStorage(ctrl))
 	err := w.HandleEvent(context.Background(),
 		envelopeFor(t, domain.EventTypeAvatarUploaded, domain.AvatarUploadEvent{AvatarID: "av-1"}))
 	require.NoError(t, err)
@@ -93,7 +92,7 @@ func TestHandleEvent_Uploaded_SkipsDeletedAvatar(t *testing.T) {
 	repo.EXPECT().GetAvatarByID(gomock.Any(), "gone").
 		Return(nil, domain.ErrAvatarNotFound)
 
-	w := New(repo, mocks.NewMockFileStorage(ctrl), zap.NewNop())
+	w := New(repo, mocks.NewMockFileStorage(ctrl))
 	err := w.HandleEvent(context.Background(),
 		envelopeFor(t, domain.EventTypeAvatarUploaded, domain.AvatarUploadEvent{AvatarID: "gone"}))
 	require.NoError(t, err)
@@ -115,7 +114,7 @@ func TestHandleEvent_Uploaded_TransientStorageFailure(t *testing.T) {
 		Return(nil, errors.New("minio down"))
 	// no SetAvatarProcessingStatus expectation: it must NOT be called
 
-	w := New(repo, storage, zap.NewNop())
+	w := New(repo, storage)
 	err := w.HandleEvent(context.Background(),
 		envelopeFor(t, domain.EventTypeAvatarUploaded, domain.AvatarUploadEvent{AvatarID: "av-1"}))
 	require.Error(t, err)
@@ -140,7 +139,7 @@ func TestHandleEvent_Uploaded_CorruptImageIsPermanent(t *testing.T) {
 		SetAvatarProcessingStatus(gomock.Any(), "av-1", domain.ProcessingStatusFailed).
 		Return(nil)
 
-	w := New(repo, storage, zap.NewNop())
+	w := New(repo, storage)
 	err := w.HandleEvent(context.Background(),
 		envelopeFor(t, domain.EventTypeAvatarUploaded, domain.AvatarUploadEvent{AvatarID: "av-1"}))
 	require.Error(t, err)
@@ -156,7 +155,7 @@ func TestHandleEvent_Deleted_RemovesAllKeys(t *testing.T) {
 	storage.EXPECT().Delete(gomock.Any(), "avatars/av-1/original").Return(nil)
 	storage.EXPECT().Delete(gomock.Any(), "thumbnails/av-1/100x100.jpg").Return(nil)
 
-	w := New(mocks.NewMockGophprofileRepository(ctrl), storage, zap.NewNop())
+	w := New(mocks.NewMockGophprofileRepository(ctrl), storage)
 	err := w.HandleEvent(context.Background(),
 		envelopeFor(t, domain.EventTypeAvatarDeleted, domain.AvatarDeleteEvent{
 			AvatarID: "av-1",
@@ -176,7 +175,7 @@ func TestHandleEvent_Deleted_FailureIsTransient(t *testing.T) {
 	storage.EXPECT().Delete(gomock.Any(), "a").Return(errors.New("nope"))
 	storage.EXPECT().Delete(gomock.Any(), "b").Return(nil)
 
-	w := New(mocks.NewMockGophprofileRepository(ctrl), storage, zap.NewNop())
+	w := New(mocks.NewMockGophprofileRepository(ctrl), storage)
 	err := w.HandleEvent(context.Background(),
 		envelopeFor(t, domain.EventTypeAvatarDeleted, domain.AvatarDeleteEvent{
 			AvatarID: "av-1", S3Keys: []string{"a", "b"},
@@ -191,7 +190,7 @@ func TestHandleEvent_MalformedPayloadIsPermanent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	w := New(mocks.NewMockGophprofileRepository(ctrl), mocks.NewMockFileStorage(ctrl), zap.NewNop())
+	w := New(mocks.NewMockGophprofileRepository(ctrl), mocks.NewMockFileStorage(ctrl))
 	err := w.HandleEvent(context.Background(),
 		domain.EventEnvelope{Type: domain.EventTypeAvatarUploaded, Payload: json.RawMessage(`{broken`)})
 	require.Error(t, err)
@@ -203,7 +202,7 @@ func TestHandleEvent_UnknownTypeIsIgnored(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	w := New(mocks.NewMockGophprofileRepository(ctrl), mocks.NewMockFileStorage(ctrl), zap.NewNop())
+	w := New(mocks.NewMockGophprofileRepository(ctrl), mocks.NewMockFileStorage(ctrl))
 	err := w.HandleEvent(context.Background(),
 		domain.EventEnvelope{Type: "avatar.future_thing", Payload: json.RawMessage(`{}`)})
 	require.NoError(t, err)

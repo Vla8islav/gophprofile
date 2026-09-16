@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
+	"github.com/Vla8islav/gophprofile/internal/logging"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
@@ -80,12 +81,13 @@ func (r *Relay) relayOne(ctx context.Context, event domain.OutboxEvent) error {
 	ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.MapCarrier(event.TraceContext))
 	ctx, span := tracer.Start(ctx, "outbox.publish")
 	defer span.End()
+	ctx = logging.Into(ctx, logging.WithTrace(ctx, r.logger))
 
 	if err := r.publisher.Publish(ctx, event.Key, event.Type, event.Payload); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		outboxPublishFailures.Inc()
-		r.logger.Warn("outbox: publish failed, will retry next tick",
+		logging.From(ctx).Warn("outbox: publish failed, will retry next tick",
 			zap.Int64("event_id", event.ID),
 			zap.String("type", event.Type),
 			zap.Error(err),
@@ -97,7 +99,7 @@ func (r *Relay) relayOne(ctx context.Context, event domain.OutboxEvent) error {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		outboxMarkFailures.Inc()
-		r.logger.Error("outbox: failed to mark event sent",
+		logging.From(ctx).Error("outbox: failed to mark event sent",
 			zap.Int64("event_id", event.ID),
 			zap.Error(err),
 		)

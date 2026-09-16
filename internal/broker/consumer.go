@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
+	"github.com/Vla8islav/gophprofile/internal/logging"
 	"github.com/segmentio/kafka-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -66,6 +67,7 @@ func (c *KafkaConsumer) Run(ctx context.Context, handle EventHandler) error {
 			msgCtx := otel.GetTextMapPropagator().Extract(ctx, kafkaHeaderCarrier{&message.Headers})
 			msgCtx, span := tracer.Start(msgCtx, "consume "+envelope.Type,
 				trace.WithSpanKind(trace.SpanKindConsumer))
+			msgCtx = logging.Into(msgCtx, logging.WithTrace(msgCtx, c.logger))
 			err := c.handleWithRetry(msgCtx, handle, envelope, message)
 			span.End()
 			if err != nil {
@@ -92,7 +94,7 @@ func (c *KafkaConsumer) handleWithRetry(ctx context.Context, handle EventHandler
 		}
 		if IsPermanent(err) {
 			consumerEvents.WithLabelValues("permanent").Inc()
-			c.logger.Error("dropping event after permanent failure",
+			logging.From(ctx).Error("dropping event after permanent failure",
 				zap.String("type", envelope.Type),
 				zap.String("key", string(message.Key)),
 				zap.Error(err),
@@ -104,7 +106,7 @@ func (c *KafkaConsumer) handleWithRetry(ctx context.Context, handle EventHandler
 		if backoff > handlerBackoffMax || backoff <= 0 { // <=0 guards shift overflow
 			backoff = handlerBackoffMax
 		}
-		c.logger.Warn("transient failure, will retry same message",
+		logging.From(ctx).Warn("transient failure, will retry same message",
 			zap.String("type", envelope.Type),
 			zap.String("key", string(message.Key)),
 			zap.Int("attempt", attempt),
