@@ -50,5 +50,5 @@ func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	if response.Status != "ok" {
 		status = http.StatusServiceUnavailable
 	}
-	h.writeJSON(w, status, response)
+	h.writeJSON(r.Context(), w, status, response)
 }

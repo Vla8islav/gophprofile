@@ -29,12 +29,12 @@ func (h *Handler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	authResult, err := h.service.LoginUser(r.Context(),
 		domain.UserLoginRequest{Login: login, Password: password})
 	if errors.Is(err, repository.ErrUserNotFound) || errors.Is(err, domain.ErrInvalidUserCredentials) {
-		h.writeUnauthorised(w, "invalid user login or password")
+		h.writeUnauthorised(r.Context(), w, "invalid user login or password")
 		return
 	}
 	if err != nil {
-		h.writeInternalServerError(w, err.Error())
+		h.writeInternalServerError(r.Context(), w, err.Error())
 		return
 	}
-	h.writeToken(w, authResult.Token)
+	h.writeToken(r.Context(), w, authResult.Token)
 }

@@ -22,7 +22,8 @@ func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 			return r.URL.Path != "/metrics" &&
 				r.URL.Path != "/health" &&
 				!strings.HasPrefix(r.URL.Path, "/web/static/") // don't trace garbage requests
-		})))
+		}))) // creates the span
+	r.Use(middlewares.WithRequestLogger(h.logger)) // reads the span
 	r.Use(middlewares.WithMetrics)
 
 	// Swagger UI
