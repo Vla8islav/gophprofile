@@ -36,18 +36,18 @@ func main() {
 	if err != nil {
 		lg.Error("worker failed", zap.Error(err))
 	}
-	_ = lg.Sync()
+	_ = lg.Sync() // explicit, BEFORE exit — os.Exit skips main's defers too
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
+// run owns the worker's whole lifecycle
 func run(lg *zap.Logger) error {
-
 	// same flag pools
 	currentConfig, err := config.ReadFlagsServer(os.Args[1:], lg)
 	if err != nil {
-		return fmt.Errorf("failed to read config %w", err)
+		return fmt.Errorf("read config: %w", err)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -55,7 +55,7 @@ func run(lg *zap.Logger) error {
 
 	shutdownTracing, err := tracing.Init(ctx, "gophprofile-worker")
 	if err != nil {
-		return fmt.Errorf("init tracing %w", err)
+		return fmt.Errorf("init tracing: %w", err)
 	}
 	defer func() {
 		flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -67,7 +67,7 @@ func run(lg *zap.Logger) error {
 
 	db, err := repository.NewPostgresStorage(currentConfig, "")
 	if err != nil {
-		return fmt.Errorf("init db %w", err)
+		return fmt.Errorf("init db: %w", err)
 	}
 
 	fileStorage, err := filestorage.NewMinioStorage(ctx,
@@ -78,7 +78,7 @@ func run(lg *zap.Logger) error {
 		currentConfig.S3UseSSL.Value,
 	)
 	if err != nil {
-		return fmt.Errorf("init file storage %w", err)
+		return fmt.Errorf("init file storage: %w", err)
 	}
 
 	consumer := broker.NewKafkaConsumer(
@@ -102,23 +102,22 @@ func run(lg *zap.Logger) error {
 			lg.Error("metrics server failed", zap.Error(err))
 		}
 	}()
-
-	lg.Info("worker starting",
-		zap.String("topic", currentConfig.KafkaTopic.Value),
-		zap.String("group", consumerGroupID),
-	)
-	if err = consumer.Run(ctx, avatarWorker.HandleEvent); err != nil {
-		return fmt.Errorf("consumer stopped %w", err)
-	}
-
-	defer func() {
+	defer func() { // registered BEFORE consumer.Run
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := metricsSrv.Shutdown(shutdownCtx); err != nil {
 			lg.Warn("metrics server shutdown", zap.Error(err))
 		}
 	}()
-	lg.Info("worker stopped gracefully")
 
-	return err
+	lg.Info("worker starting",
+		zap.String("topic", currentConfig.KafkaTopic.Value),
+		zap.String("group", consumerGroupID),
+	)
+	if err := consumer.Run(ctx, avatarWorker.HandleEvent); err != nil {
+		return fmt.Errorf("consumer stopped: %w", err)
+	}
+
+	lg.Info("worker stopped gracefully")
+	return nil
 }

@@ -1,4 +1,4 @@
-package run
+package gophprofile_server
 
 import (
 	"context"
