@@ -6,7 +6,6 @@ import (
 
 	"github.com/Vla8islav/gophprofile/internal/audit"
 	"github.com/Vla8islav/gophprofile/internal/domain"
-	"github.com/Vla8islav/gophprofile/internal/repository"
 )
 
 // UserLoginHandler godoc
@@ -28,13 +27,13 @@ func (h *Handler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	authResult, err := h.service.LoginUser(r.Context(),
 		domain.UserLoginRequest{Login: login, Password: password})
-	if errors.Is(err, repository.ErrUserNotFound) || errors.Is(err, domain.ErrInvalidUserCredentials) {
-		h.writeUnauthorised(w, "invalid user login or password")
+	if errors.Is(err, domain.ErrInvalidUserCredentials) {
+		h.writeUnauthorised(r.Context(), w, "invalid user login or password")
 		return
 	}
 	if err != nil {
-		h.writeInternalServerError(w, err.Error())
+		h.writeInternalServerError(r.Context(), w, err.Error())
 		return
 	}
-	h.writeToken(w, authResult.Token)
+	h.writeToken(r.Context(), w, authResult.Token)
 }

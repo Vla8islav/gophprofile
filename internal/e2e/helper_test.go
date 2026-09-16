@@ -132,7 +132,7 @@ func startStack(t *testing.T) string {
 		// The real worker consumes in-process, so e2e covers the full async
 		// pipeline: upload -> event -> thumbnails -> completed.
 		consumer := broker.NewKafkaConsumer([]string{seedBroker}, "avatar-events-e2e", "e2e-worker", zap.NewNop())
-		avatarWorker := worker.New(db, fs, zap.NewNop())
+		avatarWorker := worker.New(db, fs)
 		workerCtx, stopWorker := context.WithCancel(context.Background())
 		testStopWorker = stopWorker
 		go func() { _ = consumer.Run(workerCtx, avatarWorker.HandleEvent) }()

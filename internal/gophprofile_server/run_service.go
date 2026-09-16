@@ -1,4 +1,4 @@
-package run
+package gophprofile_server
 
 import (
 	"context"
@@ -17,6 +17,8 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/middlewares"
 	"github.com/Vla8islav/gophprofile/internal/outbox"
 	"github.com/Vla8islav/gophprofile/internal/service"
+	"github.com/Vla8islav/gophprofile/internal/servicemetrics"
+	"github.com/Vla8islav/gophprofile/internal/servicetracing"
 	"go.uber.org/zap"
 )
 
@@ -43,14 +45,14 @@ func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.Optio
 	relay := outbox.NewRelay(db, events, logger)
 	go relay.Run(ctx)
 
-	srvApp := service.NewGophprofileService(db, fs, events, logger,
-		cfg.AuthTokenSecret.Value)
+	srvApp := servicemetrics.Wrap(servicetracing.Wrap(service.NewGophprofileService(db, fs, events, logger,
+		cfg.AuthTokenSecret.Value)))
 
 	h := handler.NewHandler(srvApp, logger)
 	r := handler.NewRouter(h, cfg)
 
 	// Middleware chain - first arg to ChainMiddlewares is the outermost wrapper
-	mws := []middlewares.Middleware{middlewares.WithLogging(logger)}
+	mws := []middlewares.Middleware{}
 	if cfg.AuditLogPath.Value != "" {
 		sink := audit.NewFileSink(cfg.AuditLogPath.Value)
 		defer func() { _ = sink.Close() }()

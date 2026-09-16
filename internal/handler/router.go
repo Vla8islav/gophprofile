@@ -2,7 +2,10 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/riandyrn/otelchi"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"github.com/Vla8islav/gophprofile/internal/config"
@@ -14,6 +17,14 @@ import (
 func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.StripSlashes)
+	r.Use(otelchi.Middleware("gophprofile-server", otelchi.WithChiRoutes(r),
+		otelchi.WithFilter(func(r *http.Request) bool {
+			return r.URL.Path != "/metrics" &&
+				r.URL.Path != "/health" &&
+				!strings.HasPrefix(r.URL.Path, "/web/static/") // don't trace garbage requests
+		}))) // creates the span
+	r.Use(middlewares.WithRequestLogger(h.logger)) // reads the span
+	r.Use(middlewares.WithMetrics)
 
 	// Swagger UI
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
@@ -22,6 +33,9 @@ func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 	r.Get("/api/ping", h.DBPing)
 	r.Post("/api/user/register", h.UserRegisterHandler)
 	r.Post("/api/user/login", h.UserLoginHandler)
+
+	// Metrics
+	r.Handle("/metrics", promhttp.Handler())
 
 	// web interface
 	r.Get("/web", func(w http.ResponseWriter, r *http.Request) {

@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/Vla8islav/gophprofile/internal/logging"
 	"go.uber.org/zap"
 )
 
@@ -15,7 +16,7 @@ import (
 func (h *Handler) DBPing(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodGet {
-		h.logger.Warn("method not allowed",
+		logging.From(r.Context()).Warn("method not allowed",
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path),
 		)
@@ -25,11 +26,12 @@ func (h *Handler) DBPing(w http.ResponseWriter, r *http.Request) {
 
 	err := h.service.Ping(r.Context())
 	if err != nil {
-		h.logger.Error("db ping failed",
+		logging.From(r.Context()).Error("db ping failed",
 			zap.Error(err),
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path),
 		)
+
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

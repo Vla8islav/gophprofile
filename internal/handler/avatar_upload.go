@@ -37,13 +37,13 @@ func (h *Handler) AvatarUploadHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(domain.MaxAvatarSizeBytes + multipartOverhead); err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			h.writeJSONError(w, http.StatusRequestEntityTooLarge, apiError{
+			h.writeJSONError(r.Context(), w, http.StatusRequestEntityTooLarge, apiError{
 				Error:   "File too large",
 				MaxSize: domain.MaxAvatarSizeBytes,
 			})
 			return
 		}
-		h.writeJSONError(w, http.StatusBadRequest, apiError{
+		h.writeJSONError(r.Context(), w, http.StatusBadRequest, apiError{
 			Error:   "Invalid request",
 			Details: "expected multipart/form-data with a \"file\" field",
 		})
@@ -52,7 +52,7 @@ func (h *Handler) AvatarUploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		h.writeJSONError(w, http.StatusBadRequest, apiError{
+		h.writeJSONError(r.Context(), w, http.StatusBadRequest, apiError{
 			Error:   "Invalid request",
 			Details: "missing \"file\" field",
 		})
@@ -61,7 +61,7 @@ func (h *Handler) AvatarUploadHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = file.Close() }()
 
 	if header.Size > domain.MaxAvatarSizeBytes {
-		h.writeJSONError(w, http.StatusRequestEntityTooLarge, apiError{
+		h.writeJSONError(r.Context(), w, http.StatusRequestEntityTooLarge, apiError{
 			Error:   "File too large",
 			MaxSize: domain.MaxAvatarSizeBytes,
 		})
@@ -73,29 +73,29 @@ func (h *Handler) AvatarUploadHandler(w http.ResponseWriter, r *http.Request) {
 	head := make([]byte, 512)
 	n, err := io.ReadFull(file, head)
 	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
-		h.writeInternalServerError(w, "failed to read uploaded file: "+err.Error())
+		h.writeInternalServerError(r.Context(), w, "failed to read uploaded file: "+err.Error())
 		return
 	}
 	mimeType := http.DetectContentType(head[:n])
 	if !domain.AllowedAvatarMimeTypes[mimeType] {
-		h.writeJSONError(w, http.StatusBadRequest, apiError{
+		h.writeJSONError(r.Context(), w, http.StatusBadRequest, apiError{
 			Error:   "Invalid file format",
 			Details: "Supported formats: jpeg, png, webp",
 		})
 		return
 	}
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		h.writeInternalServerError(w, "failed to rewind uploaded file: "+err.Error())
+		h.writeInternalServerError(r.Context(), w, "failed to rewind uploaded file: "+err.Error())
 		return
 	}
 
 	avatar, err := h.service.UploadAvatar(r.Context(), userID, header.Filename, mimeType, header.Size, file)
 	if err != nil {
-		h.writeInternalServerError(w, err.Error())
+		h.writeInternalServerError(r.Context(), w, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, domain.AvatarUploadResponse{
+	h.writeJSON(r.Context(), w, http.StatusCreated, domain.AvatarUploadResponse{
 		ID:        avatar.ID,
 		UserID:    avatar.UserID,
 		URL:       domain.AvatarURL(avatar.ID),

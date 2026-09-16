@@ -11,7 +11,7 @@ func (h *Handler) serveWebFile(name, contentType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, err := web.Static.ReadFile("static/" + name)
 		if err != nil {
-			h.writeInternalServerError(w, "missing embedded asset "+name)
+			h.writeInternalServerError(r.Context(), w, "missing embedded asset "+name)
 			return
 		}
 		w.Header().Set("Content-Type", contentType)

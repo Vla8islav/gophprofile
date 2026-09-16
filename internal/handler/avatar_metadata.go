@@ -24,15 +24,15 @@ func (h *Handler) AvatarMetadataHandler(w http.ResponseWriter, r *http.Request) 
 
 	avatar, err := h.service.GetAvatarMetadata(r.Context(), avatarID)
 	if errors.Is(err, domain.ErrAvatarNotFound) {
-		h.writeAvatarNotFound(w)
+		h.writeAvatarNotFound(r.Context(), w)
 		return
 	}
 	if err != nil {
-		h.writeInternalServerError(w, err.Error())
+		h.writeInternalServerError(r.Context(), w, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, avatar.ToMetadataResponse())
+	h.writeJSON(r.Context(), w, http.StatusOK, avatar.ToMetadataResponse())
 }
 
 // UserAvatarsListHandler godoc
@@ -52,7 +52,7 @@ func (h *Handler) UserAvatarsListHandler(w http.ResponseWriter, r *http.Request)
 
 	avatars, err := h.service.ListUserAvatars(r.Context(), userID)
 	if err != nil {
-		h.writeInternalServerError(w, err.Error())
+		h.writeInternalServerError(r.Context(), w, err.Error())
 		return
 	}
 
@@ -63,5 +63,5 @@ func (h *Handler) UserAvatarsListHandler(w http.ResponseWriter, r *http.Request)
 		response.Avatars = append(response.Avatars, avatars[i].ToMetadataResponse())
 	}
 
-	h.writeJSON(w, http.StatusOK, response)
+	h.writeJSON(r.Context(), w, http.StatusOK, response)
 }

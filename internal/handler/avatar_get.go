@@ -30,11 +30,11 @@ func (h *Handler) AvatarGetHandler(w http.ResponseWriter, r *http.Request) {
 
 	avatar, content, err := h.service.GetAvatarContent(r.Context(), avatarID, size)
 	if errors.Is(err, domain.ErrAvatarNotFound) {
-		h.writeAvatarNotFound(w)
+		h.writeAvatarNotFound(r.Context(), w)
 		return
 	}
 	if err != nil {
-		h.writeInternalServerError(w, err.Error())
+		h.writeInternalServerError(r.Context(), w, err.Error())
 		return
 	}
 
@@ -64,11 +64,11 @@ func (h *Handler) UserAvatarGetHandler(w http.ResponseWriter, r *http.Request) {
 
 	avatar, content, err := h.service.GetUserAvatarContent(r.Context(), userID, size)
 	if errors.Is(err, domain.ErrAvatarNotFound) {
-		h.writeAvatarNotFound(w)
+		h.writeAvatarNotFound(r.Context(), w)
 		return
 	}
 	if err != nil {
-		h.writeInternalServerError(w, err.Error())
+		h.writeInternalServerError(r.Context(), w, err.Error())
 		return
 	}
 
