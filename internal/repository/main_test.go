@@ -7,7 +7,7 @@ import (
 )
 
 // TestMain tears the shared container down explicitly, so cleanup does not
-// depend on the Ryuk reaper (which some docker environments cannot run).
+// depend on the Ryuk reaper (which some docker environments cannot gophprofile_server).
 func TestMain(m *testing.M) {
 	code := m.Run()
 	if testPGContainer != nil {

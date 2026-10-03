@@ -10,7 +10,6 @@ import (
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
 	"github.com/Vla8islav/gophprofile/internal/mocks"
-	"github.com/Vla8islav/gophprofile/internal/repository"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"go.uber.org/zap"
@@ -210,7 +209,7 @@ func TestUserLoginHandler_InvalidCredentials(t *testing.T) {
 			Login:    "test-login",
 			Password: "wrong-password",
 		}).
-		Return(nil, repository.ErrUserNotFound)
+		Return(nil, domain.ErrInvalidUserCredentials)
 
 	h := newTestLoginHandler(service)
 

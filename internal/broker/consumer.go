@@ -8,7 +8,10 @@ import (
 	"time"
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
+	"github.com/Vla8islav/gophprofile/internal/logging"
 	"github.com/segmentio/kafka-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -52,15 +55,24 @@ func (c *KafkaConsumer) Run(ctx context.Context, handle EventHandler) error {
 		var envelope domain.EventEnvelope
 		if err := json.Unmarshal(message.Value, &envelope); err != nil {
 			// garbage
+			consumerEvents.WithLabelValues("malformed").Inc()
 			c.logger.Error("skipping malformed event",
 				zap.String("key", string(message.Key)),
 				zap.Int("partition", message.Partition),
 				zap.Int64("offset", message.Offset),
 				zap.Error(err),
 			)
-		} else if err := c.handleWithRetry(ctx, handle, envelope, message); err != nil {
-			// shutdown mid-retry
-			return nil
+
+		} else {
+			msgCtx := otel.GetTextMapPropagator().Extract(ctx, kafkaHeaderCarrier{&message.Headers})
+			msgCtx, span := tracer.Start(msgCtx, "consume "+envelope.Type,
+				trace.WithSpanKind(trace.SpanKindConsumer))
+			msgCtx = logging.Into(msgCtx, logging.WithTrace(msgCtx, c.logger))
+			err := c.handleWithRetry(msgCtx, handle, envelope, message)
+			span.End()
+			if err != nil {
+				return nil // shutdown mid-retry
+			}
 		}
 
 		if err := c.reader.CommitMessages(ctx, message); err != nil {
@@ -77,10 +89,12 @@ func (c *KafkaConsumer) handleWithRetry(ctx context.Context, handle EventHandler
 	for attempt := 1; ; attempt++ {
 		err := handle(ctx, envelope)
 		if err == nil {
+			consumerEvents.WithLabelValues("ok").Inc()
 			return nil
 		}
 		if IsPermanent(err) {
-			c.logger.Error("dropping event after permanent failure",
+			consumerEvents.WithLabelValues("permanent").Inc()
+			logging.From(ctx).Error("dropping event after permanent failure",
 				zap.String("type", envelope.Type),
 				zap.String("key", string(message.Key)),
 				zap.Error(err),
@@ -92,13 +106,14 @@ func (c *KafkaConsumer) handleWithRetry(ctx context.Context, handle EventHandler
 		if backoff > handlerBackoffMax || backoff <= 0 { // <=0 guards shift overflow
 			backoff = handlerBackoffMax
 		}
-		c.logger.Warn("transient failure, will retry same message",
+		logging.From(ctx).Warn("transient failure, will retry same message",
 			zap.String("type", envelope.Type),
 			zap.String("key", string(message.Key)),
 			zap.Int("attempt", attempt),
 			zap.Duration("backoff", backoff),
 			zap.Error(err),
 		)
+		consumerEvents.WithLabelValues("retry").Inc()
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

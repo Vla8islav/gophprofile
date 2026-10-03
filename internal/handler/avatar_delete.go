@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -8,17 +9,17 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/domain"
 )
 
-func (h *Handler) writeDeleteResult(w http.ResponseWriter, err error) {
+func (h *Handler) writeDeleteResult(ctx context.Context, w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, domain.ErrAvatarNotFound):
-		h.writeAvatarNotFound(w)
+		h.writeAvatarNotFound(ctx, w)
 	case errors.Is(err, domain.ErrNotAvatarOwner):
-		h.writeJSONError(w, http.StatusForbidden, apiError{
+		h.writeJSONError(ctx, w, http.StatusForbidden, apiError{
 			Error:   "Forbidden",
 			Details: "You can only delete your own avatars",
 		})
 	case err != nil:
-		h.writeInternalServerError(w, err.Error())
+		h.writeInternalServerError(ctx, w, err.Error())
 	default:
 		w.WriteHeader(http.StatusNoContent)
 	}
@@ -47,7 +48,7 @@ func (h *Handler) AvatarDeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.writeDeleteResult(w, h.service.DeleteAvatar(r.Context(), avatarID, requesterID))
+	h.writeDeleteResult(r.Context(), w, h.service.DeleteAvatar(r.Context(), avatarID, requesterID))
 }
 
 // UserAvatarDeleteHandler godoc
@@ -74,5 +75,5 @@ func (h *Handler) UserAvatarDeleteHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.writeDeleteResult(w, h.service.DeleteUserAvatar(r.Context(), userID, requesterID))
+	h.writeDeleteResult(r.Context(), w, h.service.DeleteUserAvatar(r.Context(), userID, requesterID))
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/Vla8islav/gophprofile/internal/audit"
 	"github.com/Vla8islav/gophprofile/internal/domain"
-	"github.com/Vla8islav/gophprofile/internal/repository"
 )
 
 // UserRegisterHandler godoc
@@ -30,14 +29,14 @@ func (h *Handler) UserRegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	authResult, err := h.service.CreateUser(r.Context(),
 		domain.UserRegisterRequest{Login: login, Password: password})
-	if errors.Is(err, repository.ErrUserAlreadyExists) {
-		h.writeAlreadyExists(w, err.Error())
+	if errors.Is(err, domain.ErrUserAlreadyExists) {
+		h.writeAlreadyExists(r.Context(), w, err.Error())
 		return
 	}
 	if err != nil {
-		h.writeInternalServerError(w, err.Error())
+		h.writeInternalServerError(r.Context(), w, err.Error())
 		return
 	}
 
-	h.writeToken(w, authResult.Token)
+	h.writeToken(r.Context(), w, authResult.Token)
 }

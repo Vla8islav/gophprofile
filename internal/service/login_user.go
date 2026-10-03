@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
@@ -10,10 +11,14 @@ import (
 
 func (m gophprofileService) LoginUser(ctx context.Context, userRegReq domain.UserLoginRequest) (*domain.AuthResult, error) {
 	user, err := m.repository.GetUserByLogin(ctx, userRegReq.Login)
+
+	if errors.Is(err, domain.ErrUserNotFound) {
+		return nil, fmt.Errorf("login %s: %w", userRegReq.Login, domain.ErrInvalidUserCredentials)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("couldn't find user %s: %w", userRegReq.Login, err)
 	}
-
+	
 	if !helpers.CheckPassword(userRegReq.Password, user.PasswordHash) {
 		return nil, fmt.Errorf("invalid user credentials for user %s: %w", userRegReq.Login, domain.ErrInvalidUserCredentials)
 	}

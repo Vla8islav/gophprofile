@@ -6,6 +6,10 @@ import (
 	"time"
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
+	"github.com/Vla8islav/gophprofile/internal/logging"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	"go.uber.org/zap"
 )
 
@@ -58,27 +62,48 @@ func (r *Relay) drain(ctx context.Context) {
 			r.logger.Error("outbox: failed to list unsent events", zap.Error(err))
 			return
 		}
+
 		if len(events) == 0 {
+			outboxOldestPendingAge.Set(0)
 			return
 		}
+		outboxOldestPendingAge.Set(time.Since(events[0].CreatedAt).Seconds())
 
 		for _, event := range events {
-			if err := r.publisher.Publish(ctx, event.Key, event.Type, event.Payload); err != nil {
-				r.logger.Warn("outbox: publish failed, will retry next tick",
-					zap.Int64("event_id", event.ID),
-					zap.String("type", event.Type),
-					zap.Error(err),
-				)
-				return
-			}
-			if err := r.repository.MarkOutboxEventSent(ctx, event.ID); err != nil {
-				// The event WAS published
-				r.logger.Error("outbox: failed to mark event sent",
-					zap.Int64("event_id", event.ID),
-					zap.Error(err),
-				)
-				return
+			if err := r.relayOne(ctx, event); err != nil {
+				return // relayOne already logged and counted the failure
 			}
 		}
 	}
+}
+
+func (r *Relay) relayOne(ctx context.Context, event domain.OutboxEvent) error {
+	ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.MapCarrier(event.TraceContext))
+	ctx, span := tracer.Start(ctx, "outbox.publish")
+	defer span.End()
+	ctx = logging.Into(ctx, logging.WithTrace(ctx, r.logger))
+
+	if err := r.publisher.Publish(ctx, event.Key, event.Type, event.Payload); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		outboxPublishFailures.Inc()
+		logging.From(ctx).Warn("outbox: publish failed, will retry next tick",
+			zap.Int64("event_id", event.ID),
+			zap.String("type", event.Type),
+			zap.Error(err),
+		)
+		return err
+	}
+	outboxPublished.Inc()
+	if err := r.repository.MarkOutboxEventSent(ctx, event.ID); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		outboxMarkFailures.Inc()
+		logging.From(ctx).Error("outbox: failed to mark event sent",
+			zap.Int64("event_id", event.ID),
+			zap.Error(err),
+		)
+		return err
+	}
+	return nil
 }

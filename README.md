@@ -56,9 +56,9 @@ docker compose up -d postgres minio kafka
 
 DATABASE_URI='postgres://gophprofile:gophprofile@localhost:5432/gophprofile?sslmode=disable' \
 S3_ENDPOINT=localhost:9000 KAFKA_BROKERS=localhost:19092 \
-go run ./cmd/gophprofile-server        # terminal 1
+go gophprofile_server ./cmd/gophprofile-server        # terminal 1
 
 DATABASE_URI='postgres://gophprofile:gophprofile@localhost:5432/gophprofile?sslmode=disable' \
 S3_ENDPOINT=localhost:9000 KAFKA_BROKERS=localhost:19092 \
-go run ./cmd/gophprofile-worker        # terminal 2
+go gophprofile_server ./cmd/gophprofile-worker        # terminal 2
 ```

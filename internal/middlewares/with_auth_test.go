@@ -78,7 +78,7 @@ func TestWithAuth(t *testing.T) {
 				gotUserID  int64
 			)
 
-			// The protected handler. It should ONLY run when auth succeeds,
+			// The protected handler. It should ONLY gophprofile_server when auth succeeds,
 			// and when it runs, the user ID must be in the context.
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				nextCalled = true

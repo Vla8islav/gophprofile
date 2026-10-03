@@ -22,7 +22,7 @@ func (s *PostgresStorage) CreateUser(ctx context.Context, user domain.CreateUser
 			user.PasswordHash,
 		).Scan(&userID)
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrUserAlreadyExists
+			return domain.ErrUserAlreadyExists
 		}
 		if err != nil {
 			return fmt.Errorf("failed to create a new user %s: %w", user.Login, err)

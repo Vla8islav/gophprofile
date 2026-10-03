@@ -12,6 +12,7 @@ import (
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
 	"github.com/segmentio/kafka-go"
+	"go.opentelemetry.io/otel"
 )
 
 type KafkaPublisher struct {
@@ -86,7 +87,8 @@ func (p *KafkaPublisher) Publish(ctx context.Context, key string, eventType stri
 		Key:   []byte(key),
 		Value: envelope,
 	}
-
+	otel.GetTextMapPropagator().Inject(ctx, kafkaHeaderCarrier{&message.Headers})
+	
 	for attempt := 1; ; attempt++ {
 		err = p.writer.WriteMessages(ctx, message)
 		if err == nil {

@@ -43,6 +43,6 @@ func TestPostgresStorage_GetUserByLogin_NotFound(t *testing.T) {
 	ctx := context.Background()
 
 	user, err := storage.GetUserByLogin(ctx, helpers.UniqueLogin("missing-user"))
-	require.ErrorIs(t, err, ErrUserNotFound)
+	require.ErrorIs(t, err, domain.ErrUserNotFound)
 	require.Nil(t, user)
 }

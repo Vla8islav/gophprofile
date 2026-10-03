@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
+	"github.com/Vla8islav/gophprofile/internal/logging"
 	"github.com/Vla8islav/gophprofile/internal/middlewares"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -21,24 +23,24 @@ type apiError struct {
 	MaxSize int64  `json:"max_size,omitempty"`
 }
 
-func (h *Handler) writeJSONError(w http.ResponseWriter, status int, apiErr apiError) {
-	h.logger.Info("api error",
+func (h *Handler) writeJSONError(ctx context.Context, w http.ResponseWriter, status int, apiErr apiError) {
+	logging.From(ctx).Info("api error",
 		zap.Int("status", status),
 		zap.String("error", apiErr.Error),
 		zap.String("details", apiErr.Details),
 	)
-	h.writeJSON(w, status, apiErr)
+	h.writeJSON(ctx, w, status, apiErr)
 }
 
-func (h *Handler) writeAvatarNotFound(w http.ResponseWriter) {
-	h.writeJSONError(w, http.StatusNotFound, apiError{Error: "Avatar not found"})
+func (h *Handler) writeAvatarNotFound(ctx context.Context, w http.ResponseWriter) {
+	h.writeJSONError(ctx, w, http.StatusNotFound, apiError{Error: "Avatar not found"})
 }
 
 // requestUserID extracts the authenticated user from the request context
 func (h *Handler) requestUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	userID, ok := middlewares.UserIDFromContext(r.Context())
 	if !ok {
-		h.writeUnauthorised(w, "authentication required")
+		h.writeUnauthorised(r.Context(), w, "authentication required")
 		return 0, false
 	}
 	return userID, true
@@ -50,7 +52,8 @@ func (h *Handler) requestUserID(w http.ResponseWriter, r *http.Request) (int64, 
 func (h *Handler) avatarIDParam(w http.ResponseWriter, r *http.Request) (string, bool) {
 	avatarID := chi.URLParam(r, "avatar_id")
 	if _, err := uuid.Parse(avatarID); err != nil {
-		h.writeAvatarNotFound(w)
+		h.writeAvatarNotFound(r.Context(), w)
+
 		return "", false
 	}
 	return avatarID, true
@@ -59,7 +62,7 @@ func (h *Handler) avatarIDParam(w http.ResponseWriter, r *http.Request) (string,
 func (h *Handler) userIDParam(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	userID, err := strconv.ParseInt(chi.URLParam(r, "user_id"), 10, 64)
 	if err != nil {
-		h.writeJSONError(w, http.StatusBadRequest, apiError{
+		h.writeJSONError(r.Context(), w, http.StatusBadRequest, apiError{
 			Error:   "Invalid user id",
 			Details: "user_id must be an integer",
 		})
@@ -78,7 +81,7 @@ var allowedSizeVariants = map[string]bool{
 func (h *Handler) sizeParam(w http.ResponseWriter, r *http.Request) (string, bool) {
 	size := r.URL.Query().Get("size")
 	if !allowedSizeVariants[size] {
-		h.writeJSONError(w, http.StatusBadRequest, apiError{
+		h.writeJSONError(r.Context(), w, http.StatusBadRequest, apiError{
 			Error:   "Invalid size",
 			Details: "Supported sizes: 100x100, 300x300, original",
 		})
@@ -107,6 +110,6 @@ func (h *Handler) serveAvatarContent(w http.ResponseWriter, r *http.Request, ava
 	w.Header().Set("Content-Type", contentType)
 	if _, err := io.Copy(w, content); err != nil {
 		// Headers are already out; all we can do is log the broken transfer.
-		h.logger.Warn("failed to stream avatar content", zap.Error(err))
+		logging.From(r.Context()).Warn("failed to stream avatar content", zap.Error(err))
 	}
 }

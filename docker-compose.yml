@@ -81,6 +81,7 @@ services:
       KAFKA_BROKERS: "kafka:9092"
       KAFKA_TOPIC: "avatar-events"
       AUDIT_LOG_PATH: "/var/log/gophprofile/audit.jsonl"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     volumes:
       - audit_logs:/var/log/gophprofile
     ports:
@@ -106,9 +107,60 @@ services:
       S3_BUCKET: "avatars"
       KAFKA_BROKERS: "kafka:9092"
       KAFKA_TOPIC: "avatar-events"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+    ports:
+      - '9091:9091'
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+    ports:
+      - '9090:9090'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - '3000:3000'
+    depends_on:
+      - prometheus
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    container_name: jaeger
+    restart: unless-stopped
+    ports:
+      - '16686:16686' # UI
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: loki
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail.yml:/etc/promtail/config.yml:ro
+      - /var/gophprofile_server/docker.sock:/var/gophprofile_server/docker.sock:ro
+    depends_on:
+      - loki
 
 volumes:
   postgres_data:
   minio_data:
   kafka_data:
   audit_logs:
+  prometheus_data:
+  grafana_data:

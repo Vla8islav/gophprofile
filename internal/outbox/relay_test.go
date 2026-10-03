@@ -8,6 +8,7 @@ import (
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
 	"github.com/Vla8islav/gophprofile/internal/mocks"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"go.uber.org/mock/gomock"
 	"go.uber.org/zap"
 )
@@ -75,4 +76,30 @@ func TestRelay_MarkFailureStopsPass(t *testing.T) {
 		Return(errors.New("db hiccup"))
 
 	NewRelay(repo, publisher, zap.NewNop()).drain(context.Background())
+}
+
+func TestRelay_MarkFailureIsNotCountedAsPublishFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockGophprofileRepository(ctrl)
+	publisher := mocks.NewMockEventPublisher(ctrl)
+
+	repo.EXPECT().UnsentOutboxEvents(gomock.Any(), batchSize).
+		Return([]domain.OutboxEvent{event(1, "av-1")}, nil)
+	publisher.EXPECT().Publish(gomock.Any(), "av-1", gomock.Any(), gomock.Any()).Return(nil)
+	repo.EXPECT().MarkOutboxEventSent(gomock.Any(), int64(1)).Return(errors.New("db down"))
+
+	pubFailBefore := testutil.ToFloat64(outboxPublishFailures)
+	markFailBefore := testutil.ToFloat64(outboxMarkFailures)
+
+	NewRelay(repo, publisher, zap.NewNop()).drain(context.Background())
+
+	if d := testutil.ToFloat64(outboxMarkFailures) - markFailBefore; d != 1 {
+		t.Errorf("mark_failures delta = %v, want 1", d)
+	}
+	if d := testutil.ToFloat64(outboxPublishFailures) - pubFailBefore; d != 0 {
+		t.Errorf("publish_failures delta = %v, want 0 (publish SUCCEEDED; "+
+			"counting it as failed misreports a duplicate-delivery event as broker trouble)", d)
+	}
 }
