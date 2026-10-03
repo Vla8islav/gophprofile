@@ -111,11 +111,7 @@ func (s *PostgresStorage) UnsentOutboxEvents(ctx context.Context, limit int) ([]
 				return fmt.Errorf("failed to scan outbox event: %w", err)
 			}
 			event.Payload = payload
-			if traceContext != nil {
-				if err := json.Unmarshal(traceContext, &event.TraceContext); err != nil {
-					return fmt.Errorf("failed to decode trace context for event %d: %w", event.ID, err)
-				}
-			}
+			event.TraceContext = traceContext
 			events = append(events, event)
 		}
 		return rows.Err()

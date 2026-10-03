@@ -14,7 +14,7 @@ type OutboxEvent struct {
 	Payload   json.RawMessage
 	CreatedAt time.Time
 
-	TraceContext map[string]string
+	TraceContext json.RawMessage
 }
 
 // NewOutboxEvent marshals payload once, at enqueue time
