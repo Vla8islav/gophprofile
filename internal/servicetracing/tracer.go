@@ -7,6 +7,7 @@ import (
 	"github.com/Vla8islav/gophprofile/internal/domain"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var tracer = otel.Tracer("gophprofile/service")
@@ -16,16 +17,20 @@ type withTracing struct {
 	next domain.GophprofileService
 }
 
-func (t *withTracing) Ping(ctx context.Context) error {
-	ctx, span := tracer.Start(ctx, "service.Ping")
-	defer span.End()
-
-	err := t.next.Ping(ctx)
+func recordSpanResult(span trace.Span, err error) error {
 	if err != nil && !domain.IsBusinessErr(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
 	return err
+}
+
+func (t *withTracing) Ping(ctx context.Context) error {
+	ctx, span := tracer.Start(ctx, "service.Ping")
+	defer span.End()
+
+	err := t.next.Ping(ctx)
+	return recordSpanResult(span, err)
 }
 
 func (t *withTracing) FileStoragePing(ctx context.Context) error {
@@ -33,11 +38,7 @@ func (t *withTracing) FileStoragePing(ctx context.Context) error {
 	defer span.End()
 
 	err := t.next.FileStoragePing(ctx)
-	if err != nil && !domain.IsBusinessErr(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	return err
+	return recordSpanResult(span, err)
 }
 
 func (t *withTracing) BrokerPing(ctx context.Context) error {
@@ -45,11 +46,7 @@ func (t *withTracing) BrokerPing(ctx context.Context) error {
 	defer span.End()
 
 	err := t.next.BrokerPing(ctx)
-	if err != nil && !domain.IsBusinessErr(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	return err
+	return recordSpanResult(span, err)
 }
 
 func (t *withTracing) CreateUser(ctx context.Context, request domain.UserRegisterRequest) (*domain.AuthResult, error) {
@@ -57,11 +54,7 @@ func (t *withTracing) CreateUser(ctx context.Context, request domain.UserRegiste
 	defer span.End()
 
 	a, err := t.next.CreateUser(ctx, request)
-	if err != nil && !domain.IsBusinessErr(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	return a, err
+	return a, recordSpanResult(span, err)
 }
 
 func (t *withTracing) LoginUser(ctx context.Context, request domain.UserLoginRequest) (*domain.AuthResult, error) {
@@ -69,11 +62,7 @@ func (t *withTracing) LoginUser(ctx context.Context, request domain.UserLoginReq
 	defer span.End()
 
 	a, err := t.next.LoginUser(ctx, request)
-	if err != nil && !domain.IsBusinessErr(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	return a, err
+	return a, recordSpanResult(span, err)
 }
 
 func (t *withTracing) GetAvatarContent(ctx context.Context, avatarID string, sizeVariant string) (*domain.Avatar, io.ReadCloser, error) {
@@ -81,11 +70,7 @@ func (t *withTracing) GetAvatarContent(ctx context.Context, avatarID string, siz
 	defer span.End()
 
 	a, r, err := t.next.GetAvatarContent(ctx, avatarID, sizeVariant)
-	if err != nil && !domain.IsBusinessErr(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	return a, r, err
+	return a, r, recordSpanResult(span, err)
 }
 
 func (t *withTracing) GetUserAvatarContent(ctx context.Context, userID int64, sizeVariant string) (*domain.Avatar, io.ReadCloser, error) {
@@ -93,11 +78,7 @@ func (t *withTracing) GetUserAvatarContent(ctx context.Context, userID int64, si
 	defer span.End()
 
 	a, r, err := t.next.GetUserAvatarContent(ctx, userID, sizeVariant)
-	if err != nil && !domain.IsBusinessErr(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	return a, r, err
+	return a, r, recordSpanResult(span, err)
 }
 
 func (t *withTracing) GetAvatarMetadata(ctx context.Context, avatarID string) (*domain.Avatar, error) {
@@ -105,11 +86,7 @@ func (t *withTracing) GetAvatarMetadata(ctx context.Context, avatarID string) (*
 	defer span.End()
 
 	a, err := t.next.GetAvatarMetadata(ctx, avatarID)
-	if err != nil && !domain.IsBusinessErr(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	return a, err
+	return a, recordSpanResult(span, err)
 }
 
 func (t *withTracing) ListUserAvatars(ctx context.Context, userID int64) ([]domain.Avatar, error) {
@@ -117,11 +94,7 @@ func (t *withTracing) ListUserAvatars(ctx context.Context, userID int64) ([]doma
 	defer span.End()
 
 	a, err := t.next.ListUserAvatars(ctx, userID)
-	if err != nil && !domain.IsBusinessErr(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	return a, err
+	return a, recordSpanResult(span, err)
 
 }
 
@@ -130,11 +103,7 @@ func (t *withTracing) DeleteAvatar(ctx context.Context, avatarID string, request
 	defer span.End()
 
 	err := t.next.DeleteAvatar(ctx, avatarID, requesterID)
-	if err != nil && !domain.IsBusinessErr(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	return err
+	return recordSpanResult(span, err)
 }
 
 func (t *withTracing) DeleteUserAvatar(ctx context.Context, userID int64, requesterID int64) error {
@@ -142,11 +111,7 @@ func (t *withTracing) DeleteUserAvatar(ctx context.Context, userID int64, reques
 	defer span.End()
 
 	err := t.next.DeleteUserAvatar(ctx, userID, requesterID)
-	if err != nil && !domain.IsBusinessErr(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	return err
+	return recordSpanResult(span, err)
 }
 
 func Wrap(next domain.GophprofileService) domain.GophprofileService {
@@ -158,9 +123,5 @@ func (t *withTracing) UploadAvatar(ctx context.Context, userID int64, fileName, 
 	defer span.End()
 
 	a, err := t.next.UploadAvatar(ctx, userID, fileName, mimeType, size, content)
-	if err != nil && !domain.IsBusinessErr(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	return a, err
+	return a, recordSpanResult(span, err)
 }

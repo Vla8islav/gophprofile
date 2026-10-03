@@ -3,6 +3,7 @@ package outbox
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/Vla8islav/gophprofile/internal/domain"
@@ -78,7 +79,14 @@ func (r *Relay) drain(ctx context.Context) {
 }
 
 func (r *Relay) relayOne(ctx context.Context, event domain.OutboxEvent) error {
-	ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.MapCarrier(event.TraceContext))
+	carrier := propagation.MapCarrier{}
+	if len(event.TraceContext) > 0 {
+		if err := json.Unmarshal(event.TraceContext, &carrier); err != nil {
+			r.logger.Warn("outbox: malformed trace context, publishing without trace",
+				zap.Int64("event_id", event.ID), zap.Error(err))
+		}
+	}
+	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
 	ctx, span := tracer.Start(ctx, "outbox.publish")
 	defer span.End()
 	ctx = logging.Into(ctx, logging.WithTrace(ctx, r.logger))
