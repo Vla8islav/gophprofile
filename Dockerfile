@@ -17,6 +17,7 @@ WORKDIR /app
 
 COPY --from=builder /build/gophprofile-server /usr/local/bin/gophprofile-server
 COPY --from=builder /build/gophprofile-worker /usr/local/bin/gophprofile-worker
+COPY --from=builder /build/gophprofile-migrate /usr/local/bin/gophprofile-migrate
 COPY --from=builder --chmod=755 /app/migrations /app/migrations
 COPY --from=builder --chown=nonroot:nonroot /out/var/log/gophprofile /var/log/gophprofile
 
