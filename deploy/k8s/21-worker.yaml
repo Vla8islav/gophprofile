@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: worker
-          image: gophprofile:a466efd
+          image: gophprofile:3161a76
           command: [ "/usr/local/bin/gophprofile-worker" ]
           imagePullPolicy: IfNotPresent
           envFrom:
@@ -55,3 +55,17 @@ spec:
               memory: 64Mi
             limits:
               memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gophprofile-worker
+  namespace: gophprofile
+  labels:
+    app: gophprofile-worker
+spec:
+  selector:
+    app: gophprofile-worker
+  ports:
+    - name: metrics
+      port: 9091

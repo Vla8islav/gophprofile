@@ -17,7 +17,7 @@ import (
 // Values' order of precedence: environment vars, command-line flags, config file, defaults.
 type OptionsServer struct {
 	ServerAddress    OptionalString `env:"RUN_ADDRESS" json:"server_address" command_arg:"a"`
-	DatabaseURI      OptionalString `env:"DATABASE_URI" json:"database_uri" command_arg:"d"`
+	DatabaseURI      OptionalString `env:"DATABASE_URI" json:"database_uri" command_arg:"d" secret:"true"`
 	MigrationsFolder OptionalString `env:"MIGRATIONS_FOLDER" json:"migrations_folder" command_arg:"m"`
 	AuthTokenSecret  OptionalString `env:"AUTH_TOKEN_SECRET" json:"auth_token_secret" command_arg:"s"`
 	PublicCertKey    OptionalString `env:"PUBLIC_CERT_KEY" json:"public_cert_key" command_arg:"public-key"`

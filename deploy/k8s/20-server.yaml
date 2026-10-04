@@ -28,6 +28,8 @@ kind: Service
 metadata:
   name: gophprofile
   namespace: gophprofile
+  labels:
+    app: gophprofile-server
 spec:
   selector:
     app: gophprofile-server
@@ -51,7 +53,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: gophprofile:a466efd
+          image: gophprofile:3161a76
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:

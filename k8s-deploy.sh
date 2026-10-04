@@ -16,3 +16,15 @@ kubectl wait --for=condition=complete job/gophprofile-migrate -n gophprofile --t
 kubectl apply -f "$DIR/deploy/k8s/20-server.yaml"
 kubectl apply -f "$DIR/deploy/k8s/21-worker.yaml"
 kubectl apply -f "$DIR/deploy/k8s/30-ingress.yaml"
+kubectl apply -f "$DIR/deploy/k8s/40-monitoring.yaml"
+kubectl apply -f "$DIR/deploy/k8s/41-grafana-ingress.yaml"
+
+
+# import dashboard into the cluster configmap
+kubectl create configmap gophprofile-dashboard -n monitoring \
+  --from-file=gophprofile.json="$DIR/grafana/dashboards/gophprofile.json" \
+  --dry-run=client -o yaml \
+  | kubectl label --local -f - grafana_dashboard=1 -o yaml \
+  | kubectl apply -f -
+
+kubectl apply -f "$DIR/deploy/k8s/50-networkpolicy.yaml"
