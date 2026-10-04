@@ -41,7 +41,6 @@ metadata:
   name: gophprofile-server
   namespace: gophprofile
 spec:
-  replicas: 2
   selector:
     matchLabels:
       app: gophprofile-server
@@ -91,3 +90,23 @@ spec:
               memory: 64Mi
             limits:
               memory: 256Mi
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gophprofile-server
+  namespace: gophprofile
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gophprofile-server
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
