@@ -41,8 +41,7 @@ metadata:
   name: gophprofile-server
   namespace: gophprofile
 spec:
-  # MUST stay 1 until migrations move to a Job: every server pod shouldn't run goose.Up on boot
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: gophprofile-server
@@ -53,7 +52,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: gophprofile:fcf46eb
+          image: gophprofile:7ddf592
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:

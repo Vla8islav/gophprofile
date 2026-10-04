@@ -10,7 +10,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: gophprofile:fcf46eb
+          image: gophprofile:7ddf592
           command: [ "/usr/local/bin/gophprofile-migrate" ]
           env:
             - name: MIGRATIONS_FOLDER

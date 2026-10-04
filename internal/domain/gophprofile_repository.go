@@ -16,8 +16,8 @@ type GophprofileRepository interface {
 	SetAvatarUploadStatus(ctx context.Context, avatarID string, status string) error
 	CompleteAvatarUpload(ctx context.Context, avatarID string, event OutboxEvent) error
 	SoftDeleteAvatarWithEvent(ctx context.Context, avatarID string, event OutboxEvent) error
-	UnsentOutboxEvents(ctx context.Context, limit int) ([]OutboxEvent, error)
-	MarkOutboxEventSent(ctx context.Context, eventID int64) error
+	ProcessUnsentOutboxEvents(ctx context.Context, limit int,
+		handle func(context.Context, OutboxEvent) error) (int, error)
 	SetAvatarProcessingStatus(ctx context.Context, avatarID string, status string) error
 	SetAvatarThumbnails(ctx context.Context, avatarID string, thumbnailKeys map[string]string) error
 	SoftDeleteAvatar(ctx context.Context, avatarID string) error
