@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Vla8islav/gophprofile/internal/audit"
@@ -31,8 +32,9 @@ func TestWithAudit_RecordsAnnotatedEvent(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodPost, "/api/secret/create", nil)
-	req.Header.Set("X-Forwarded-For", "203.0.113.7, 10.0.0.1")
-	WithAudit(pub)(h).ServeHTTP(httptest.NewRecorder(), req)
+	req.Header.Set("X-Forwarded-For", "6.6.6.6, 203.0.113.7")
+	chain := middleware.ClientIPFromXFFTrustedProxies(1)(WithAudit(pub)(h))
+	chain.ServeHTTP(httptest.NewRecorder(), req)
 
 	require.Len(t, sink.events, 1)
 	e := sink.events[0]

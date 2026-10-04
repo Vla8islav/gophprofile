@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -23,10 +24,19 @@ func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 			return r.URL.Path != "/metrics" &&
 				r.URL.Path != "/health" &&
 				!strings.HasPrefix(r.URL.Path, "/web/static/") // don't trace garbage requests
-		})))                                       // creates the span
+		}))) // creates the span
 	r.Use(middlewares.WithRequestLogger(h.logger)) // reads the span
 	r.Use(middlewares.WithMetrics)
-	r.Use(middlewares.WithRateLimit(10, 20))
+
+	rps, err := strconv.ParseFloat(cfg.RateLimitRPS.Value, 64)
+	if err != nil || rps <= 0 {
+		rps = 10
+	}
+	burst, err := strconv.Atoi(cfg.RateLimitBurst.Value)
+	if err != nil || burst <= 0 {
+		burst = 20
+	}
+	r.Use(middlewares.WithRateLimit(rps, burst))
 
 	// Swagger UI
 	r.Get("/swagger/*", httpSwagger.WrapHandler)

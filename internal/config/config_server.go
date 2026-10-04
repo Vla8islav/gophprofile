@@ -30,7 +30,11 @@ type OptionsServer struct {
 	S3UseSSL         OptionalBool   `env:"S3_USE_SSL" json:"s3_use_ssl" command_arg:"s3-use-ssl"`
 	KafkaBrokers     OptionalString `env:"KAFKA_BROKERS" json:"kafka_brokers" command_arg:"kafka-brokers"`
 	KafkaTopic       OptionalString `env:"KAFKA_TOPIC" json:"kafka_topic" command_arg:"kafka-topic"`
-	Config           OptionalString `env:"CONFIG" json:"-" command_arg:"config"`
+
+	RateLimitRPS   OptionalString `env:"RATE_LIMIT_RPS"   json:"rate_limit_rps"   command_arg:"rate-rps"`
+	RateLimitBurst OptionalString `env:"RATE_LIMIT_BURST" json:"rate_limit_burst" command_arg:"rate-burst"`
+
+	Config OptionalString `env:"CONFIG" json:"-" command_arg:"config"`
 }
 
 // ReadFlagsServer  Precedence: environment variables, command-line flags, config file, defaults.
@@ -124,6 +128,14 @@ func ReadFlagsServer(args []string, logger *zap.Logger) (*OptionsServer, error) 
 			Value:   "",
 			BeenSet: false,
 		},
+		RateLimitBurst: OptionalString{
+			Value:   "20",
+			BeenSet: false,
+		},
+		RateLimitRPS: OptionalString{
+			Value:   "10",
+			BeenSet: false,
+		},
 	}
 
 	mergeOptions(&finalOptions, diskConfigOptions)
@@ -174,6 +186,9 @@ func getOptionsServer(args []string) (*OptionsServer, error) {
 	fs.Var(&opt.KafkaTopic, "kafka-topic", "kafka-топик для событий аватарок")
 	fs.Var(&opt.Config, "config", "путь до файла с конфигурацией приложения")
 	fs.Var(&opt.Config, "c", "путь до файла с конфигурацией приложения")
+
+	fs.Var(&opt.RateLimitBurst, "rate-limit-burst", "пиковый рейт-лимит")
+	fs.Var(&opt.RateLimitRPS, "rate-limit-rps", "рейт-лимит средний")
 	if err := fs.Parse(args); err != nil {
 		return nil, err
 	}
