@@ -1,13 +1,13 @@
 FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS builder
 WORKDIR /app
-
-COPY go.mod go.sum ./
-RUN go mod download
+RUN uname -m
 
 COPY . .
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -o /build/gophprofile-server ./cmd/gophprofile-server && \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -o /build/gophprofile-worker ./cmd/gophprofile-worker
