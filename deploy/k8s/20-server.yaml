@@ -53,7 +53,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: gophprofile:32c45a3
+          image: gophprofile:312cc4f
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
@@ -77,7 +77,7 @@ spec:
               containerPort: 8080
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: http
             initialDelaySeconds: 3
             periodSeconds: 5

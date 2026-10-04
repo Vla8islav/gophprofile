@@ -41,6 +41,10 @@ func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
 	// Swagger UI
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
+	r.Get("/ready", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
 	r.Get("/health", h.HealthHandler)
 	r.Get("/api/ping", h.DBPing)
 	r.Post("/api/user/register", h.UserRegisterHandler)

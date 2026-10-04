@@ -90,7 +90,16 @@ func (h *Handler) AvatarUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	avatar, err := h.service.UploadAvatar(r.Context(), userID, header.Filename, mimeType, header.Size, file)
-	if err != nil {
+
+	switch {
+	case errors.Is(err, domain.ErrStorageUnavailable):
+		w.Header().Set("Retry-After", "10")
+		h.writeJSONError(r.Context(), w, http.StatusServiceUnavailable, apiError{
+			Error:   "storage temporarily unavailable",
+			Details: "retry after a few seconds",
+		})
+		return
+	case err != nil:
 		h.writeInternalServerError(r.Context(), w, err.Error())
 		return
 	}
