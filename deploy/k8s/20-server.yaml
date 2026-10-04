@@ -53,7 +53,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: gophprofile:312cc4f
+          image: gophprofile:a9d04fc
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:

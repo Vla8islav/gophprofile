@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: worker
-          image: gophprofile:312cc4f
+          image: gophprofile:a9d04fc
           command: [ "/usr/local/bin/gophprofile-worker" ]
           imagePullPolicy: IfNotPresent
           envFrom:
