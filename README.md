@@ -9,7 +9,6 @@ Three binaries from one repo:
 * `cmd/gophprofile-worker` - Kafka consumer: thumbnails + S3 cleanup
 * `cmd/gophprofile-migrate` - goose migration runner (run as a k8s Job)
 
-Docs: [architecture & design decisions](docs/architecture.md) ·
 [monitoring & alerts](docs/monitoring.md) · Swagger UI at `/swagger/index.html`.
 
 ## How to run
