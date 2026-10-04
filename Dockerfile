@@ -1,4 +1,4 @@
-FROM golang:1.26-bookworm AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS builder
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -19,7 +19,7 @@ WORKDIR /app
 
 COPY --from=builder /build/gophprofile-server /usr/local/bin/gophprofile-server
 COPY --from=builder /build/gophprofile-worker /usr/local/bin/gophprofile-worker
-COPY --from=builder /app/migrations /app/migrations
+COPY --from=builder --chmod=755 /app/migrations /app/migrations
 COPY --from=builder --chown=nonroot:nonroot /out/var/log/gophprofile /var/log/gophprofile
 
 USER nonroot

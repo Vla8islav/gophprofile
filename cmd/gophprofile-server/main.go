@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	_ "github.com/Vla8islav/gophprofile/docs" // generated OpenAPI spec (swag init)
@@ -48,8 +50,8 @@ func run(lg *zap.Logger) error {
 	}
 	lg.Info("starting server ", zap.String("Server addr", currentConfig.ServerAddress.Value))
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	shutdownTracing, err := tracing.Init(ctx, "gophprofile-server")
 	if err != nil {

@@ -17,7 +17,7 @@ services:
       start_period: 10s
 
   minio:
-    image: minio/minio:RELEASE.2024-01-16T16-07-38Z
+    image: vla8islav/minio:RELEASE.2024-01-16T16-07-38Z
     container_name: gophprofile-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
