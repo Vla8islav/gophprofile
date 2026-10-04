@@ -8,7 +8,7 @@ ARG TARGETARCH=amd64
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    go build -o /build/ ./cmd/gophprofile-server ./cmd/gophprofile-worker
+    go build -o /build/ ./cmd/...
 
 RUN mkdir -p /out/var/log/gophprofile
 

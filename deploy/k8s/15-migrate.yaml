@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gophprofile-migrate
+  namespace: gophprofile
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: gophprofile:776240d
+          command: [ "/usr/local/bin/gophprofile-migrate" ]
+          env:
+            - name: MIGRATIONS_FOLDER
+              value: /app/migrations
+            - name: DATABASE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: gophprofile-secrets
+                  key: DATABASE_URI

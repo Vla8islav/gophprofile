@@ -13,7 +13,7 @@ func TestReadFlagsServer_Defaults(t *testing.T) {
 	cfg, err := ReadFlagsServer(nil, zap.NewNop())
 	require.NoError(t, err)
 	require.Equal(t, "localhost:8080", cfg.ServerAddress.Value)
-	require.Equal(t, "./migrations", cfg.MigrationsFolder.Value)
+	require.Equal(t, "", cfg.MigrationsFolder.Value)
 	require.Equal(t, "", cfg.AuditLogPath.Value)
 	require.False(t, cfg.ServerAddress.BeenSet)
 }
@@ -69,4 +69,11 @@ func TestReadFlagsServer_InvalidConfigFile(t *testing.T) {
 func TestReadFlagsServer_UnknownFlagErrors(t *testing.T) {
 	_, err := ReadFlagsServer([]string{"-totally-unknown-flag", "x"}, zap.NewNop())
 	require.Error(t, err)
+}
+
+func TestReadFlagsServer_EmptyEnvMigrationsFolder(t *testing.T) {
+	t.Setenv("MIGRATIONS_FOLDER", "")
+	opt, err := ReadFlagsServer([]string{}, zap.NewNop())
+	require.NoError(t, err)
+	require.Equal(t, "", opt.MigrationsFolder.Value)
 }

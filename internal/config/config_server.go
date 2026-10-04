@@ -73,7 +73,7 @@ func ReadFlagsServer(args []string, logger *zap.Logger) (*OptionsServer, error) 
 			BeenSet: false,
 		},
 		MigrationsFolder: OptionalString{
-			Value:   "./migrations",
+			Value:   "",
 			BeenSet: false,
 		},
 		AuthTokenSecret: OptionalString{
