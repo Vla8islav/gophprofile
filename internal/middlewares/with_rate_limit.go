@@ -39,10 +39,14 @@ func WithRateLimit(rps float64, burst int) Middleware {
 	go l.cleanup() // evict entries idle >3min, every minute — unbounded map otherwise
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/health" || r.URL.Path == "/metrics" {
+				next.ServeHTTP(w, r)
+				return
+			}
 			if !l.allow(clientIP(r)) {
 				w.Header().Set("Retry-After", "1")
 				http.Error(w, `{"error":"rate limit exceeded"}`, http.StatusTooManyRequests)
-				rateLimitedTotal.Inc() // promauto counter, same pattern as with_metrics.go
+				rateLimitedTotal.Inc() // promauto counter
 				return
 			}
 			next.ServeHTTP(w, r)

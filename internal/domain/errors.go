@@ -12,6 +12,7 @@ var ErrNotAvatarOwner = fmt.Errorf("you can only delete your own avatars")
 var ErrUnsupportedAvatarFormat = fmt.Errorf("unsupported avatar format")
 var ErrUserNotFound = errors.New("user not found")
 var ErrUserAlreadyExists = errors.New("user already exists")
+var ErrStorageUnavailable = fmt.Errorf("file storage temporarily unavailable")
 
 // IsBusinessErr reports whether err is an expected business outcome
 func IsBusinessErr(err error) bool {

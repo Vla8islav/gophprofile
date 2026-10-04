@@ -24,7 +24,7 @@ import (
 
 func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.OptionsServer, logger *zap.Logger) error {
 
-	fs, err := filestorage.NewMinioStorage(ctx,
+	minioFS, err := filestorage.NewMinioStorage(ctx,
 		cfg.S3Endpoint.Value,
 		cfg.S3AccessKey.Value,
 		cfg.S3SecretKey.Value,
@@ -34,6 +34,7 @@ func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.Optio
 	if err != nil {
 		return err
 	}
+	var fs domain.FileStorage = filestorage.NewBreakerStorage(minioFS, logger)
 
 	events := broker.NewKafkaPublisher(ctx,
 		strings.Split(cfg.KafkaBrokers.Value, ","),

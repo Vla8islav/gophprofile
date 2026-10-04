@@ -11,6 +11,10 @@ import (
 
 func (h *Handler) writeDeleteResult(ctx context.Context, w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, domain.ErrStorageUnavailable):
+		w.Header().Set("Retry-After", "10")
+		h.writeJSONError(ctx, w, http.StatusServiceUnavailable, apiError{Error: "storage temporarily unavailable",
+			Details: "storage seems to be down"})
 	case errors.Is(err, domain.ErrAvatarNotFound):
 		h.writeAvatarNotFound(ctx, w)
 	case errors.Is(err, domain.ErrNotAvatarOwner):
