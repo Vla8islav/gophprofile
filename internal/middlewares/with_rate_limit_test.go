@@ -4,34 +4,43 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/Vla8islav/gophprofile/internal/logging"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
 )
 
-func TestWithRateLimit_InjectsLoggerAndWritesAccessLine(t *testing.T) {
-	core, logs := observer.New(zap.InfoLevel)
-	base := zap.New(core)
+func TestRateLimit_ServicePathsExempt(t *testing.T) {
+	limited := WithRateLimit(t.Context(), 1, 1)( // rps=1, burst=1 almost no budget
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
 
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logging.From(r.Context()).Info("from handler") // uses the injected logger
-		w.WriteHeader(http.StatusNoContent)
-	})
+	for path := range ServicePaths {
+		for i := 0; i < 20; i++ {
+			rec := httptest.NewRecorder()
+			limited.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("%s request %d: got %d, want 200 — service path hit the limiter",
+					path, i+1, rec.Code)
+			}
+		}
+	}
+}
 
-	rec := httptest.NewRecorder()
+func TestRateLimit_RegularPathsLimited(t *testing.T) {
+	limited := WithRateLimit(t.Context(), 1, 1)(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
 
-	WithRateLimit(ctx, base)(h).ServeHTTP(rec,
-		httptest.NewRequest(http.MethodGet, "/x", nil))
-
-	require.Equal(t, http.StatusNoContent, rec.Code)
-
-	require.Equal(t, 1, logs.FilterMessage("from handler").Len())
-
-	access := logs.FilterMessage("http request")
-	require.Equal(t, 1, access.Len())
-	fields := access.All()[0].ContextMap()
-	require.Equal(t, "GET", fields["method"])
-	require.EqualValues(t, http.StatusNoContent, fields["status"])
+	got429 := false
+	for i := 0; i < 20; i++ {
+		rec := httptest.NewRecorder()
+		limited.ServeHTTP(rec, httptest.NewRequest(http.MethodGet,
+			"/api/v1/avatars/x", nil))
+		if rec.Code == http.StatusTooManyRequests {
+			got429 = true
+		}
+	}
+	if !got429 {
+		t.Fatal("20 rapid requests never hit 429 — limiter inactive, " +
+			"exemption test would pass vacuously")
+	}
 }
