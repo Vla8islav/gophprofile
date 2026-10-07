@@ -20,11 +20,11 @@ var breakerState = promauto.NewGauge(prometheus.GaugeOpts{
 
 type BreakerStorage struct {
 	next domain.FileStorage
-	cb   *gobreaker.CircuitBreaker[any]
+	cb   *gobreaker.CircuitBreaker[io.ReadCloser]
 }
 
 func NewBreakerStorage(next domain.FileStorage, logger *zap.Logger) *BreakerStorage {
-	cb := gobreaker.NewCircuitBreaker[any](gobreaker.Settings{
+	cb := gobreaker.NewCircuitBreaker[io.ReadCloser](gobreaker.Settings{
 		Name:        "filestorage",
 		MaxRequests: 1,                // trial calls allowed in half-open
 		Timeout:     10 * time.Second, // open → half-open after this
@@ -41,29 +41,26 @@ func NewBreakerStorage(next domain.FileStorage, logger *zap.Logger) *BreakerStor
 }
 
 func (b *BreakerStorage) Upload(ctx context.Context, key, contentType string, size int64, content io.Reader) error {
-	_, err := b.cb.Execute(func() (any, error) {
+	_, err := b.cb.Execute(func() (io.ReadCloser, error) {
 		return nil, b.next.Upload(ctx, key, contentType, size, content)
 	})
 	return mapBreakerErr(err)
 }
 
 func (b *BreakerStorage) Download(ctx context.Context, key string) (io.ReadCloser, error) {
-	v, err := b.cb.Execute(func() (any, error) {
+	rc, err := b.cb.Execute(func() (io.ReadCloser, error) {
 		return b.next.Download(ctx, key)
 	})
 	if err != nil {
 		return nil, mapBreakerErr(err)
 	}
-	return v.(io.ReadCloser), nil
+	return rc, nil
 }
 
 func (b *BreakerStorage) Delete(ctx context.Context, key string) error {
-	_, err := b.cb.Execute(func() (any, error) {
+	_, err := b.cb.Execute(func() (io.ReadCloser, error) {
 		return nil, b.next.Delete(ctx, key)
 	})
-	if err != nil {
-		return mapBreakerErr(err)
-	}
 	return mapBreakerErr(err)
 }
 
