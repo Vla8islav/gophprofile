@@ -50,7 +50,7 @@ func Run(ctx context.Context, db domain.GophprofileRepository, cfg *config.Optio
 		cfg.AuthTokenSecret.Value)))
 
 	h := handler.NewHandler(srvApp, logger)
-	r := handler.NewRouter(h, cfg)
+	r := handler.NewRouter(ctx, h, cfg)
 
 	// Middleware chain - first arg to ChainMiddlewares is the outermost wrapper
 	mws := []middlewares.Middleware{}

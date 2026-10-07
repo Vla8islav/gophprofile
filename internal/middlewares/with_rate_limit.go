@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"context"
 	"net/http"
 	"sync"
 	"time"
@@ -9,12 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"golang.org/x/time/rate"
 )
-
-var ServicePaths = map[string]bool{
-	"/health":  true,
-	"/ready":   true,
-	"/metrics": true,
-}
 
 type ipLimiter struct {
 	mu      sync.Mutex
@@ -40,9 +35,9 @@ func newIPLimiter(rps float64, burst int) *ipLimiter {
 	}
 }
 
-func WithRateLimit(rps float64, burst int) Middleware {
+func WithRateLimit(ctx context.Context, rps float64, burst int) Middleware {
 	l := newIPLimiter(rps, burst)
-	go l.cleanup() // evict entries idle >3min, every minute — unbounded map otherwise
+	go l.cleanup(ctx) // evict entries idle >3min, every minute — unbounded map otherwise
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if ServicePaths[r.URL.Path] {
@@ -72,15 +67,21 @@ func (l *ipLimiter) allow(ip string) bool {
 	return c.limiter.Allow()
 }
 
-func (l *ipLimiter) cleanup() {
+func (l *ipLimiter) cleanup(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
 	for {
-		time.Sleep(time.Minute)
-		l.mu.Lock()
-		for ip, c := range l.clients {
-			if time.Since(c.lastSeen) > 3*time.Minute {
-				delete(l.clients, ip)
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			l.mu.Lock()
+			for ip, c := range l.clients {
+				if time.Since(c.lastSeen) > 3*time.Minute {
+					delete(l.clients, ip)
+				}
 			}
+			l.mu.Unlock()
 		}
-		l.mu.Unlock()
 	}
 }
