@@ -146,7 +146,7 @@ func startStack(t *testing.T) string {
 
 		svc := service.NewGophprofileService(db, fs, events, zap.NewNop(), cfg.AuthTokenSecret.Value)
 		h := handler.NewHandler(svc, zap.NewNop())
-		server := httptest.NewServer(handler.NewRouter(h, cfg))
+		server := httptest.NewServer(handler.NewRouter(ctx, h, cfg))
 		baseURL = server.URL
 		// The httptest server dies with the process; containers are
 		// terminated in TestMain.
