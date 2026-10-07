@@ -10,6 +10,12 @@ import (
 	"golang.org/x/time/rate"
 )
 
+var ServicePaths = map[string]bool{
+	"/health":  true,
+	"/ready":   true,
+	"/metrics": true,
+}
+
 type ipLimiter struct {
 	mu      sync.Mutex
 	clients map[string]*clientLimiter // ip -> limiter + lastSeen
@@ -39,7 +45,7 @@ func WithRateLimit(rps float64, burst int) Middleware {
 	go l.cleanup() // evict entries idle >3min, every minute — unbounded map otherwise
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/health" || r.URL.Path == "/metrics" {
+			if ServicePaths[r.URL.Path] {
 				next.ServeHTTP(w, r)
 				return
 			}
