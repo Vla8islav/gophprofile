@@ -36,7 +36,9 @@ func enqueueOutboxTx(ctx context.Context, tx *sql.Tx, event domain.OutboxEvent) 
 	return nil
 }
 
-// ProcessUnsentOutboxEvents retrieves and processes unsent outbox events
+// ProcessUnsentOutboxEvents implements the domain contract via one
+// FOR UPDATE SKIP LOCKED transaction. On ctx timeout database rolls the
+// tx back: sent_at marks are lost and already-published events repeat.
 func (s *PostgresStorage) ProcessUnsentOutboxEvents(ctx context.Context, limit int,
 	handle func(context.Context, domain.OutboxEvent) error) (int, error) {
 

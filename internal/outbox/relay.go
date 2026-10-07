@@ -17,6 +17,7 @@ import (
 const (
 	pollInterval = time.Second
 	batchSize    = 100
+	batchTimeout = 30 * time.Second
 )
 
 // Repository is the slice of the storage layer
@@ -58,7 +59,9 @@ func (r *Relay) Run(ctx context.Context) {
 // drain publishes unsent events oldest-first until the table is empty an error halts it
 func (r *Relay) drain(ctx context.Context) {
 	for {
-		processed, err := r.repository.ProcessUnsentOutboxEvents(ctx, batchSize, r.relayOne)
+		batchCtx, cancel := context.WithTimeout(ctx, batchTimeout)
+		processed, err := r.repository.ProcessUnsentOutboxEvents(batchCtx, batchSize, r.relayOne)
+		cancel()
 		if err != nil {
 			r.logger.Error("outbox: failed to process unsent events", zap.Error(err))
 			return
