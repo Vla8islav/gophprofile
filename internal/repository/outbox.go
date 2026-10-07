@@ -40,12 +40,12 @@ func enqueueOutboxTx(ctx context.Context, tx *sql.Tx, event domain.OutboxEvent) 
 // FOR UPDATE SKIP LOCKED transaction. On ctx timeout database rolls the
 // tx back: sent_at marks are lost and already-published events repeat.
 func (s *PostgresStorage) ProcessUnsentOutboxEvents(ctx context.Context, limit int,
-	handle func(context.Context, domain.OutboxEvent) error) (int, error) {
+	handle func(context.Context, domain.OutboxEvent) error) (processed, fetched int, err error) {
 
 	// no withRetryTx: retrying the tx would re-run handle and republish to Kafka
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, fmt.Errorf("begin outbox tx: %w", err)
+		return 0, 0, fmt.Errorf("begin outbox tx: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -58,9 +58,8 @@ func (s *PostgresStorage) ProcessUnsentOutboxEvents(ctx context.Context, limit i
                  FOR UPDATE SKIP LOCKED`,
 		limit,
 	)
-
 	if err != nil {
-		return 0, fmt.Errorf("select unsent outbox events: %w", err)
+		return 0, 0, fmt.Errorf("select unsent outbox events: %w", err)
 	}
 
 	events := []domain.OutboxEvent{}
@@ -77,7 +76,7 @@ func (s *PostgresStorage) ProcessUnsentOutboxEvents(ctx context.Context, limit i
 			&traceContext,
 		); err != nil {
 			rows.Close()
-			return 0, fmt.Errorf("scan outbox event: %w", err)
+			return 0, 0, fmt.Errorf("scan outbox event: %w", err)
 		}
 		event.Payload = payload
 
@@ -86,26 +85,26 @@ func (s *PostgresStorage) ProcessUnsentOutboxEvents(ctx context.Context, limit i
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return 0, fmt.Errorf("iterate outbox events: %w", err)
+		return 0, len(events), fmt.Errorf("iterate outbox events: %w", err)
 	}
 	rows.Close()
 
-	processed := 0
+	processed = 0
 	for _, ev := range events {
 		if err := handle(ctx, ev); err != nil {
 			break // publish failed: stop, but still commit the ones that worked
 		}
 		if _, err := tx.ExecContext(ctx,
 			`UPDATE outbox_events SET sent_at = now() WHERE id = $1`, ev.ID); err != nil {
-			return processed, fmt.Errorf("mark outbox event %d sent: %w", ev.ID, err)
+			return processed, len(events), fmt.Errorf("mark outbox event %d sent: %w", ev.ID, err)
 		}
 		processed++
 	}
 
 	if err := tx.Commit(); err != nil {
-		return 0, fmt.Errorf("commit outbox tx: %w", err)
+		return 0, len(events), fmt.Errorf("commit outbox tx: %w", err)
 	}
-	return processed, nil
+	return processed, len(events), nil
 }
 
 // CompleteAvatarUpload marks the upload finished and enqueues the avatar.uploaded event in ONE transaction

@@ -23,7 +23,7 @@ type GophprofileRepository interface {
 	// so callers must bound the batch via ctx. Delivery is at-least-once: an
 	// aborted batch is re-delivered next cycle - handlers must stay idempotent.
 	ProcessUnsentOutboxEvents(ctx context.Context, limit int,
-		handle func(context.Context, OutboxEvent) error) (int, error)
+		handle func(context.Context, OutboxEvent) error) (processed, fetched int, err error)
 	SetAvatarProcessingStatus(ctx context.Context, avatarID string, status string) error
 	SetAvatarThumbnails(ctx context.Context, avatarID string, thumbnailKeys map[string]string) error
 	SoftDeleteAvatar(ctx context.Context, avatarID string) error

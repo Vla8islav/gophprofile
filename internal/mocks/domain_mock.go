@@ -161,12 +161,13 @@ func (mr *MockGophprofileRepositoryMockRecorder) Ping(ctx any) *gomock.Call {
 }
 
 // ProcessUnsentOutboxEvents mocks base method.
-func (m *MockGophprofileRepository) ProcessUnsentOutboxEvents(ctx context.Context, limit int, handle func(context.Context, domain.OutboxEvent) error) (int, error) {
+func (m *MockGophprofileRepository) ProcessUnsentOutboxEvents(ctx context.Context, limit int, handle func(context.Context, domain.OutboxEvent) error) (int, int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ProcessUnsentOutboxEvents", ctx, limit, handle)
 	ret0, _ := ret[0].(int)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // ProcessUnsentOutboxEvents indicates an expected call of ProcessUnsentOutboxEvents.

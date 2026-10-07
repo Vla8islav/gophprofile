@@ -23,7 +23,7 @@ const (
 // Repository is the slice of the storage layer
 type Repository interface {
 	ProcessUnsentOutboxEvents(ctx context.Context, limit int,
-		handle func(context.Context, domain.OutboxEvent) error) (int, error)
+		handle func(context.Context, domain.OutboxEvent) error) (processed, fetched int, err error)
 }
 
 // Publisher is the producing slice of domain.EventPublisher.
@@ -60,7 +60,7 @@ func (r *Relay) Run(ctx context.Context) {
 func (r *Relay) drain(ctx context.Context) {
 	for {
 		batchCtx, cancel := context.WithTimeout(ctx, batchTimeout)
-		processed, err := r.repository.ProcessUnsentOutboxEvents(batchCtx, batchSize, r.relayOne)
+		processed, _, err := r.repository.ProcessUnsentOutboxEvents(batchCtx, batchSize, r.relayOne)
 		cancel()
 		if err != nil {
 			r.logger.Error("outbox: failed to process unsent events", zap.Error(err))
