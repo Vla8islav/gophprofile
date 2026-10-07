@@ -60,15 +60,17 @@ func (r *Relay) Run(ctx context.Context) {
 func (r *Relay) drain(ctx context.Context) {
 	for {
 		batchCtx, cancel := context.WithTimeout(ctx, batchTimeout)
-		processed, _, err := r.repository.ProcessUnsentOutboxEvents(batchCtx, batchSize, r.relayOne)
+		processed, fetched, err := r.repository.ProcessUnsentOutboxEvents(batchCtx, batchSize, r.relayOne)
 		cancel()
 		if err != nil {
 			r.logger.Error("outbox: failed to process unsent events", zap.Error(err))
 			return
 		}
 		if processed == 0 {
-			outboxOldestPendingAge.Set(0)
-			return
+			if fetched == 0 {
+				outboxOldestPendingAge.Set(0) // queue empty
+			}
+			return // fetched > 0; processing went wrong
 		}
 	}
 }

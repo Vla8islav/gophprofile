@@ -20,21 +20,20 @@ func event(id int64, key string) domain.OutboxEvent {
 	}
 }
 
-func feed(evs ...domain.OutboxEvent) func(context.Context, int, func(context.Context, domain.OutboxEvent) error) (int, error) {
-	return func(ctx context.Context, _ int, handle func(context.Context, domain.OutboxEvent) error) (int, error) {
+func feed(evs ...domain.OutboxEvent) func(context.Context, int, func(context.Context, domain.OutboxEvent) error) (int, int, error) {
+	return func(ctx context.Context, _ int, handle func(context.Context, domain.OutboxEvent) error) (int, int, error) {
 		n := 0
 		for _, ev := range evs {
 			if err := handle(ctx, ev); err != nil {
-				return n, nil
+				return n, len(evs), nil
 			}
 			n++
 		}
-		return n, nil
+		return n, len(evs), nil
 	}
 }
 
 func TestRelay_DrainsUntilEmpty(t *testing.T) {
-	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -45,7 +44,7 @@ func TestRelay_DrainsUntilEmpty(t *testing.T) {
 		repo.EXPECT().ProcessUnsentOutboxEvents(gomock.Any(), batchSize, gomock.Any()).
 			DoAndReturn(feed(event(1, "av-1"), event(2, "av-2"))),
 		repo.EXPECT().ProcessUnsentOutboxEvents(gomock.Any(), batchSize, gomock.Any()).
-			Return(0, nil),
+			Return(0, 0, nil),
 	)
 	gomock.InOrder(
 		publisher.EXPECT().Publish(gomock.Any(), "av-1",
@@ -87,12 +86,49 @@ func TestRelay_RepoErrorStops(t *testing.T) {
 	publisher := mocks.NewMockEventPublisher(ctrl)
 
 	repo.EXPECT().ProcessUnsentOutboxEvents(gomock.Any(), batchSize, gomock.Any()).
-		Return(0, errors.New("db down"))
+		Return(0, 0, errors.New("db down"))
 	// zero publisher expectations: repo failure must not reach the broker
 
 	before := testutil.ToFloat64(outboxPublishFailures)
 	NewRelay(repo, publisher, zap.NewNop()).drain(context.Background())
 	if d := testutil.ToFloat64(outboxPublishFailures) - before; d != 0 {
 		t.Errorf("publish_failures delta = %v, want 0 (repo failure misreported as broker trouble)", d)
+	}
+}
+
+func TestRelay_BlockedHeadKeepsPendingAge(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockGophprofileRepository(ctrl)
+	publisher := mocks.NewMockEventPublisher(ctrl)
+
+	repo.EXPECT().ProcessUnsentOutboxEvents(gomock.Any(), batchSize, gomock.Any()).
+		DoAndReturn(feed(event(1, "av-1"))) // invokes relayOne, returns (0, 1, nil)
+	publisher.EXPECT().Publish(gomock.Any(), "av-1", gomock.Any(), gomock.Any()).
+		Return(errors.New("kafka down")) // makes the head "blocked"
+
+	NewRelay(repo, publisher, zap.NewNop()).drain(context.Background())
+
+	if age := testutil.ToFloat64(outboxOldestPendingAge); age == 0 {
+		t.Error("oldest_pending_age zeroed while head event is still pending")
+	}
+}
+
+func TestRelay_EmptyQueueZeroesPendingAge(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockGophprofileRepository(ctrl)
+	publisher := mocks.NewMockEventPublisher(ctrl)
+
+	outboxOldestPendingAge.Set(42) // put something into ti
+	repo.EXPECT().ProcessUnsentOutboxEvents(gomock.Any(), batchSize, gomock.Any()).
+		Return(0, 0, nil) // no events, no behavior
+
+	NewRelay(repo, publisher, zap.NewNop()).drain(context.Background())
+
+	if age := testutil.ToFloat64(outboxOldestPendingAge); age != 0 {
+		t.Errorf("oldest_pending_age = %v after draining empty queue, want 0", age)
 	}
 }
