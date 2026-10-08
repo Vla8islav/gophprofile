@@ -17,20 +17,24 @@ import (
 // Values' order of precedence: environment vars, command-line flags, config file, defaults.
 type OptionsServer struct {
 	ServerAddress    OptionalString `env:"RUN_ADDRESS" json:"server_address" command_arg:"a"`
-	DatabaseURI      OptionalString `env:"DATABASE_URI" json:"database_uri" command_arg:"d"`
+	DatabaseURI      OptionalString `env:"DATABASE_URI" json:"database_uri" command_arg:"d" secret:"true"`
 	MigrationsFolder OptionalString `env:"MIGRATIONS_FOLDER" json:"migrations_folder" command_arg:"m"`
-	AuthTokenSecret  OptionalString `env:"AUTH_TOKEN_SECRET" json:"auth_token_secret" command_arg:"s"`
+	AuthTokenSecret  OptionalString `env:"AUTH_TOKEN_SECRET" json:"auth_token_secret" command_arg:"s" secret:"true"`
 	PublicCertKey    OptionalString `env:"PUBLIC_CERT_KEY" json:"public_cert_key" command_arg:"public-key"`
 	PrivateKey       OptionalString `env:"PRIVATE_KEY" json:"private_key" command_arg:"private-key"`
 	AuditLogPath     OptionalString `env:"AUDIT_LOG_PATH" json:"audit_log_path" command_arg:"audit-log"`
 	S3Endpoint       OptionalString `env:"S3_ENDPOINT" json:"s3_endpoint" command_arg:"s3-endpoint"`
-	S3AccessKey      OptionalString `env:"S3_ACCESS_KEY" json:"s3_access_key" command_arg:"s3-access-key"`
-	S3SecretKey      OptionalString `env:"S3_SECRET_KEY" json:"s3_secret_key" command_arg:"s3-secret-key"`
+	S3AccessKey      OptionalString `env:"S3_ACCESS_KEY" json:"s3_access_key" command_arg:"s3-access-key" secret:"true"`
+	S3SecretKey      OptionalString `env:"S3_SECRET_KEY" json:"s3_secret_key" command_arg:"s3-secret-key" secret:"true"`
 	S3Bucket         OptionalString `env:"S3_BUCKET" json:"s3_bucket" command_arg:"s3-bucket"`
 	S3UseSSL         OptionalBool   `env:"S3_USE_SSL" json:"s3_use_ssl" command_arg:"s3-use-ssl"`
 	KafkaBrokers     OptionalString `env:"KAFKA_BROKERS" json:"kafka_brokers" command_arg:"kafka-brokers"`
 	KafkaTopic       OptionalString `env:"KAFKA_TOPIC" json:"kafka_topic" command_arg:"kafka-topic"`
-	Config           OptionalString `env:"CONFIG" json:"-" command_arg:"config"`
+
+	RateLimitRPS   OptionalString `env:"RATE_LIMIT_RPS"   json:"rate_limit_rps"   command_arg:"rate-rps"`
+	RateLimitBurst OptionalString `env:"RATE_LIMIT_BURST" json:"rate_limit_burst" command_arg:"rate-burst"`
+
+	Config OptionalString `env:"CONFIG" json:"-" command_arg:"config"`
 }
 
 // ReadFlagsServer  Precedence: environment variables, command-line flags, config file, defaults.
@@ -73,7 +77,7 @@ func ReadFlagsServer(args []string, logger *zap.Logger) (*OptionsServer, error) 
 			BeenSet: false,
 		},
 		MigrationsFolder: OptionalString{
-			Value:   "./migrations",
+			Value:   "",
 			BeenSet: false,
 		},
 		AuthTokenSecret: OptionalString{
@@ -122,6 +126,14 @@ func ReadFlagsServer(args []string, logger *zap.Logger) (*OptionsServer, error) 
 		},
 		Config: OptionalString{
 			Value:   "",
+			BeenSet: false,
+		},
+		RateLimitBurst: OptionalString{
+			Value:   "20",
+			BeenSet: false,
+		},
+		RateLimitRPS: OptionalString{
+			Value:   "10",
 			BeenSet: false,
 		},
 	}
@@ -174,6 +186,9 @@ func getOptionsServer(args []string) (*OptionsServer, error) {
 	fs.Var(&opt.KafkaTopic, "kafka-topic", "kafka-топик для событий аватарок")
 	fs.Var(&opt.Config, "config", "путь до файла с конфигурацией приложения")
 	fs.Var(&opt.Config, "c", "путь до файла с конфигурацией приложения")
+
+	fs.Var(&opt.RateLimitBurst, "rate-limit-burst", "пиковый рейт-лимит")
+	fs.Var(&opt.RateLimitRPS, "rate-limit-rps", "рейт-лимит средний")
 	if err := fs.Parse(args); err != nil {
 		return nil, err
 	}

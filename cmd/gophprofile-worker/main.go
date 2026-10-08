@@ -15,6 +15,7 @@ import (
 
 	"github.com/Vla8islav/gophprofile/internal/broker"
 	"github.com/Vla8islav/gophprofile/internal/config"
+	"github.com/Vla8islav/gophprofile/internal/domain"
 	"github.com/Vla8islav/gophprofile/internal/filestorage"
 	"github.com/Vla8islav/gophprofile/internal/repository"
 	"github.com/Vla8islav/gophprofile/internal/tracing"
@@ -70,7 +71,7 @@ func run(lg *zap.Logger) error {
 		return fmt.Errorf("init db: %w", err)
 	}
 
-	fileStorage, err := filestorage.NewMinioStorage(ctx,
+	fileStorageMiniIO, err := filestorage.NewMinioStorage(ctx,
 		currentConfig.S3Endpoint.Value,
 		currentConfig.S3AccessKey.Value,
 		currentConfig.S3SecretKey.Value,
@@ -80,6 +81,8 @@ func run(lg *zap.Logger) error {
 	if err != nil {
 		return fmt.Errorf("init file storage: %w", err)
 	}
+
+	var fileStorage domain.FileStorage = filestorage.NewBreakerStorage(fileStorageMiniIO, lg)
 
 	consumer := broker.NewKafkaConsumer(
 		strings.Split(currentConfig.KafkaBrokers.Value, ","),

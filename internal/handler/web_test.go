@@ -23,7 +23,7 @@ func newWebTestServer(t *testing.T) *httptest.Server {
 	require.NoError(t, err)
 
 	h := NewHandler(mocks.NewMockGophprofileService(ctrl), zap.NewNop())
-	server := httptest.NewServer(NewRouter(h, cfg))
+	server := httptest.NewServer(NewRouter(t.Context(), h, cfg))
 	t.Cleanup(server.Close)
 	return server
 }

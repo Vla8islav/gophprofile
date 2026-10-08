@@ -18,7 +18,7 @@ func startMinioStorage(t *testing.T) *MinioStorage {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	container, err := tcminio.Run(ctx, "minio/minio:RELEASE.2024-01-16T16-07-38Z")
+	container, err := tcminio.Run(ctx, "vla8islav/minio:RELEASE.2024-01-16T16-07-38Z")
 	require.NoError(t, err, "failed to start minio container")
 	t.Cleanup(func() { _ = container.Terminate(context.Background()) })
 

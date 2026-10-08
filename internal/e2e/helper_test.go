@@ -83,7 +83,7 @@ func startStack(t *testing.T) string {
 			return
 		}
 
-		minioContainer, err := tcminio.Run(ctx, "minio/minio:RELEASE.2024-01-16T16-07-38Z")
+		minioContainer, err := tcminio.Run(ctx, "vla8islav/minio:RELEASE.2024-01-16T16-07-38Z")
 		if err != nil {
 			setupErr = fmt.Errorf("start minio: %w", err)
 			return
@@ -103,6 +103,11 @@ func startStack(t *testing.T) string {
 		cfg.DatabaseURI.Value = dsn
 		cfg.DatabaseURI.BeenSet = true
 		cfg.AuthTokenSecret.Value = "e2e-test-secret"
+
+		cfg.RateLimitRPS.Value = "20"
+		cfg.RateLimitRPS.BeenSet = true
+		cfg.RateLimitBurst.Value = "40"
+		cfg.RateLimitBurst.BeenSet = true
 
 		db, err := repository.NewPostgresStorage(cfg, "../../migrations")
 		if err != nil {
@@ -141,7 +146,7 @@ func startStack(t *testing.T) string {
 
 		svc := service.NewGophprofileService(db, fs, events, zap.NewNop(), cfg.AuthTokenSecret.Value)
 		h := handler.NewHandler(svc, zap.NewNop())
-		server := httptest.NewServer(handler.NewRouter(h, cfg))
+		server := httptest.NewServer(handler.NewRouter(ctx, h, cfg))
 		baseURL = server.URL
 		// The httptest server dies with the process; containers are
 		// terminated in TestMain.

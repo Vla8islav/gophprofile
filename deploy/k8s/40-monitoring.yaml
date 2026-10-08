@@ -1,0 +1,27 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gophprofile-server
+  namespace: gophprofile
+spec:
+  selector:
+    matchLabels:
+      app: gophprofile-server
+  endpoints:
+    - port: http # matches the Service's port NAME, not number
+      path: /metrics
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gophprofile-worker
+  namespace: gophprofile
+spec:
+  selector:
+    matchLabels:
+      app: gophprofile-worker
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s

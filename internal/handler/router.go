@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -14,20 +16,35 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(h *Handler, cfg *config.OptionsServer) http.Handler {
+func NewRouter(ctx context.Context, h *Handler, cfg *config.OptionsServer) http.Handler {
 	r := chi.NewRouter()
+	r.Use(middleware.ClientIPFromXFFTrustedProxies(1))
 	r.Use(middleware.StripSlashes)
 	r.Use(otelchi.Middleware("gophprofile-server", otelchi.WithChiRoutes(r),
 		otelchi.WithFilter(func(r *http.Request) bool {
-			return r.URL.Path != "/metrics" &&
-				r.URL.Path != "/health" &&
+			return !middlewares.ServicePaths[r.URL.Path] &&
 				!strings.HasPrefix(r.URL.Path, "/web/static/") // don't trace garbage requests
 		}))) // creates the span
+
 	r.Use(middlewares.WithRequestLogger(h.logger)) // reads the span
 	r.Use(middlewares.WithMetrics)
 
+	rps, err := strconv.ParseFloat(cfg.RateLimitRPS.Value, 64)
+	if err != nil || rps <= 0 {
+		rps = 10
+	}
+	burst, err := strconv.Atoi(cfg.RateLimitBurst.Value)
+	if err != nil || burst <= 0 {
+		burst = 20
+	}
+	r.Use(middlewares.WithRateLimit(ctx, rps, burst))
+
 	// Swagger UI
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
+
+	r.Get("/ready", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	r.Get("/health", h.HealthHandler)
 	r.Get("/api/ping", h.DBPing)

@@ -17,12 +17,13 @@ import (
 const (
 	pollInterval = time.Second
 	batchSize    = 100
+	batchTimeout = 30 * time.Second
 )
 
 // Repository is the slice of the storage layer
 type Repository interface {
-	UnsentOutboxEvents(ctx context.Context, limit int) ([]domain.OutboxEvent, error)
-	MarkOutboxEventSent(ctx context.Context, eventID int64) error
+	ProcessUnsentOutboxEvents(ctx context.Context, limit int,
+		handle func(context.Context, domain.OutboxEvent) error) (processed, fetched int, err error)
 }
 
 // Publisher is the producing slice of domain.EventPublisher.
@@ -58,27 +59,24 @@ func (r *Relay) Run(ctx context.Context) {
 // drain publishes unsent events oldest-first until the table is empty an error halts it
 func (r *Relay) drain(ctx context.Context) {
 	for {
-		events, err := r.repository.UnsentOutboxEvents(ctx, batchSize)
+		batchCtx, cancel := context.WithTimeout(ctx, batchTimeout)
+		processed, fetched, err := r.repository.ProcessUnsentOutboxEvents(batchCtx, batchSize, r.relayOne)
+		cancel()
 		if err != nil {
-			r.logger.Error("outbox: failed to list unsent events", zap.Error(err))
+			r.logger.Error("outbox: failed to process unsent events", zap.Error(err))
 			return
 		}
-
-		if len(events) == 0 {
-			outboxOldestPendingAge.Set(0)
-			return
-		}
-		outboxOldestPendingAge.Set(time.Since(events[0].CreatedAt).Seconds())
-
-		for _, event := range events {
-			if err := r.relayOne(ctx, event); err != nil {
-				return // relayOne already logged and counted the failure
+		if processed == 0 {
+			if fetched == 0 {
+				outboxOldestPendingAge.Set(0) // queue empty
 			}
+			return // fetched > 0; processing went wrong
 		}
 	}
 }
 
 func (r *Relay) relayOne(ctx context.Context, event domain.OutboxEvent) error {
+	outboxOldestPendingAge.Set(time.Since(event.CreatedAt).Seconds())
 	carrier := propagation.MapCarrier{}
 	if len(event.TraceContext) > 0 {
 		if err := json.Unmarshal(event.TraceContext, &carrier); err != nil {
@@ -103,15 +101,5 @@ func (r *Relay) relayOne(ctx context.Context, event domain.OutboxEvent) error {
 		return err
 	}
 	outboxPublished.Inc()
-	if err := r.repository.MarkOutboxEventSent(ctx, event.ID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		outboxMarkFailures.Inc()
-		logging.From(ctx).Error("outbox: failed to mark event sent",
-			zap.Int64("event_id", event.ID),
-			zap.Error(err),
-		)
-		return err
-	}
 	return nil
 }

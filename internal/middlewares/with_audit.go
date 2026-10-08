@@ -1,11 +1,12 @@
 package middlewares
 
 import (
+	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/Vla8islav/gophprofile/internal/audit"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 // WithAudit records one audit event per request. must be the outermost middleware
@@ -41,14 +42,13 @@ func WithAudit(publisher *audit.Publisher) Middleware {
 
 // clientIP returns the real client IP honoring a reverse proxy's forwarding
 func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			return strings.TrimSpace(xff[:i]) // first entry = original client
-		}
-		return strings.TrimSpace(xff)
+	if ip := middleware.GetClientIP(r.Context()); ip != "" {
+		return ip
 	}
-	if xr := r.Header.Get("X-Real-IP"); xr != "" {
-		return xr
+	// no ClientIP middleware installed (unit tests, direct access) — fall back
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
 	}
-	return r.RemoteAddr
+	return host
 }

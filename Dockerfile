@@ -1,16 +1,14 @@
-FROM golang:1.26-bookworm AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS builder
 WORKDIR /app
-
-COPY go.mod go.sum ./
-RUN go mod download
+RUN uname -m
 
 COPY . .
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    go build -o /build/gophprofile-server ./cmd/gophprofile-server && \
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    go build -o /build/gophprofile-worker ./cmd/gophprofile-worker
+    go build -o /build/ ./cmd/...
 
 RUN mkdir -p /out/var/log/gophprofile
 
@@ -19,7 +17,8 @@ WORKDIR /app
 
 COPY --from=builder /build/gophprofile-server /usr/local/bin/gophprofile-server
 COPY --from=builder /build/gophprofile-worker /usr/local/bin/gophprofile-worker
-COPY --from=builder /app/migrations /app/migrations
+COPY --from=builder /build/gophprofile-migrate /usr/local/bin/gophprofile-migrate
+COPY --from=builder --chmod=755 /app/migrations /app/migrations
 COPY --from=builder --chown=nonroot:nonroot /out/var/log/gophprofile /var/log/gophprofile
 
 USER nonroot

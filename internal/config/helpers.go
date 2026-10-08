@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/url"
 	"reflect"
 
 	"go.uber.org/zap"
@@ -27,7 +28,8 @@ func logSetFlags[T OptionsServer](options *T, logger *zap.Logger) {
 		if !beenSet.Bool() {
 			continue
 		}
-		fields = append(fields, zap.String("-"+flagName, value.String()))
+		fields = append(fields, zap.String("-"+flagName, redactIfSecret(field, value.String())))
+
 	}
 
 	if len(fields) == 0 {
@@ -59,7 +61,7 @@ func logSetEnv[T OptionsServer](options *T, logger *zap.Logger) {
 		if !beenSet.Bool() {
 			continue
 		}
-		fields = append(fields, zap.String(envName, value.String()))
+		fields = append(fields, zap.String(envName, redactIfSecret(field, value.String())))
 	}
 
 	if len(fields) == 0 {
@@ -93,7 +95,7 @@ func logConfigOptions[T OptionsServer](options *T, logger *zap.Logger) {
 		if !beenSet.Bool() {
 			continue
 		}
-		fields = append(fields, zap.String("-"+jsonFieldName, value.String()))
+		fields = append(fields, zap.String("-"+jsonFieldName, redactIfSecret(field, value.String())))
 	}
 	if len(fields) == 0 {
 		logger.Info("no config file options were set")
@@ -120,4 +122,15 @@ func mergeOptions[T OptionsServer](mergeInto *T, newValues T) {
 			intoBeenSet.Set(newBeenSet)
 		}
 	}
+}
+
+// redactIfSecret hides values of fields tagged `secret`
+func redactIfSecret(field reflect.StructField, value string) string {
+	if _, isSecret := field.Tag.Lookup("secret"); !isSecret {
+		return value
+	}
+	if u, err := url.Parse(value); err == nil && u.User != nil {
+		return u.Redacted() // postgres://gophprofile:xxxxx@postgres:5432/...
+	}
+	return "[REDACTED]"
 }
